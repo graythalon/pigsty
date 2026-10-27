@@ -29,10 +29,12 @@ namespace Pigsty
         private List<AndroidFileItem> _currentCategoryFiles;
         private CategoryType _currentCategory;
         private bool _isDemoMode;
+        private bool _isInitialized;
 
         public MainWindow()
         {
             InitializeComponent();
+            _isInitialized = true;
 
             _mtpService = new ShellMtpDeviceService();
             _demoService = new DemoDeviceService();
@@ -184,7 +186,7 @@ namespace Pigsty
 
         private void UpdateStorageOverview()
         {
-            if (_selectedDevice == null) return;
+            if (!_isInitialized || _selectedDevice == null || DeviceTitleText == null || StorageBarGrid == null) return;
 
             DeviceTitleText.Text = _selectedDevice.Name;
             StorageVolumeText.Text = string.IsNullOrEmpty(_selectedDevice.StorageName) ? "Internal shared storage" : _selectedDevice.StorageName;
@@ -267,6 +269,7 @@ namespace Pigsty
 
         private void CategoryListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (!_isInitialized) return;
             var selectedItem = CategoryListBox.SelectedItem as ListBoxItem;
             if (selectedItem == null || selectedItem.Tag == null) return;
 
@@ -287,6 +290,7 @@ namespace Pigsty
 
         private void ApplyCategoryFilter()
         {
+            if (!_isInitialized || DashboardView == null || CategoryFileListView == null) return;
             if (_currentCategory == CategoryType.Overview)
             {
                 DashboardView.Visibility = Visibility.Visible;
@@ -408,11 +412,13 @@ namespace Pigsty
 
         private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
         {
+            if (!_isInitialized) return;
             ApplyCategoryFilter();
         }
 
         private void SortComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (!_isInitialized) return;
             ApplyCategoryFilter();
         }
 
@@ -728,6 +734,7 @@ namespace Pigsty
 
         private void DeviceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (!_isInitialized) return;
             var selectedItem = DeviceComboBox.SelectedItem as ComboBoxItem;
             if (selectedItem != null && selectedItem.Tag != null)
             {
