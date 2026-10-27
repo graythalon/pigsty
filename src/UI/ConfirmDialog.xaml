@@ -1,0 +1,40 @@
+<Window x:Class="Pigsty.UI.ConfirmDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Confirm Action" Height="220" Width="440"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Background="{StaticResource BgDarkBrush}"
+        WindowStyle="None"
+        AllowsTransparency="True">
+    
+    <Border BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="6" Background="{StaticResource PanelDarkBrush}">
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,14">
+                <TextBlock x:Name="IconBlock" Text="⚠️" FontSize="20" Margin="0,0,10,0" VerticalAlignment="Center" />
+                <TextBlock x:Name="TitleBlock" Text="Confirm Deletion" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
+            </StackPanel>
+
+            <!-- Message Content -->
+            <TextBlock x:Name="MessageBlock" Grid.Row="1" TextWrapping="Wrap" LineHeight="20"
+                       FontSize="13" Foreground="{StaticResource TextMutedBrush}"
+                       Text="Are you sure you want to delete the selected files? This action cannot be undone." />
+
+            <!-- Buttons -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+                <Button x:Name="CancelButton" Content="Cancel" Style="{StaticResource SecondaryButtonStyle}"
+                        Width="85" Margin="0,0,10,0" Click="CancelButton_Click" IsCancel="True" />
+                <Button x:Name="ConfirmButton" Content="Delete" Style="{StaticResource DangerButtonStyle}"
+                        Width="85" Click="ConfirmButton_Click" IsDefault="True" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

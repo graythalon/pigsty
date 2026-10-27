@@ -1,0 +1,29 @@
+# Visual Studio / MSBuild build artifacts
+[Bb]in/
+[Oo]bj/
+src/[Bb]in/
+src/[Oo]bj/
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Visual Studio files
+.vs/
+*.dotCover
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+
+# Log files
+*.log
