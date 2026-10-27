@@ -3,13 +3,13 @@
     Build script for Pigsty - Android Storage Manager (Freeware)
 .DESCRIPTION
     Compiles Pigsty using the built-in Microsoft .NET Framework MSBuild engine
-    and creates a clean standalone release package in dist/
+    and creates a clean standalone release package in dist/ and release/
 #>
 
 $ErrorActionPreference = "Stop"
 
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host " Pigsty - Android Storage Manager Build" -ForegroundColor Cyan
+Write-Host " Pigsty v1.0.0 - Android Storage Manager Build" -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
 # Locate MSBuild
@@ -72,12 +72,21 @@ if (Test-Path $sourceExe) {
     Copy-Item $sourceExe (Join-Path $distDir "Pigsty.exe")
     Copy-Item $sourceExe (Join-Path $releaseDir "Pigsty.exe")
 
-    $hash = (Get-FileHash "$releaseDir\Pigsty.exe" -Algorithm SHA256).Hash
-    Set-Content -Path (Join-Path $releaseDir "SHA256SUMS.txt") -Value "$hash *Pigsty.exe"
+    $zipPath = Join-Path $releaseDir "Pigsty-v1.0.0-Windows.zip"
+    $ProgressPreference = 'SilentlyContinue'
+    Compress-Archive -Path "$releaseDir\Pigsty.exe", (Join-Path $PSScriptRoot "README.md"), (Join-Path $PSScriptRoot "LICENSE"), (Join-Path $PSScriptRoot "install.bat"), (Join-Path $PSScriptRoot "uninstall.bat") -DestinationPath $zipPath
 
-    Write-Host "`n[SUCCESS] Pigsty build and release packaging complete!" -ForegroundColor Green
+    $hashExe = (Get-FileHash "$releaseDir\Pigsty.exe" -Algorithm SHA256).Hash
+    $hashZip = (Get-FileHash $zipPath -Algorithm SHA256).Hash
+
+    $checksumContent = "$hashExe *Pigsty.exe`r`n$hashZip *Pigsty-v1.0.0-Windows.zip"
+    Set-Content -Path (Join-Path $releaseDir "SHA256SUMS.txt") -Value $checksumContent
+
+    Write-Host "`n[SUCCESS] Pigsty v1.0.0 build and release packaging complete!" -ForegroundColor Green
     Write-Host "Portable Single Binary: $releaseDir\Pigsty.exe" -ForegroundColor Green
-    Write-Host "SHA-256 Checksum: $hash" -ForegroundColor Yellow
+    Write-Host "Release Zip Archive:     $zipPath" -ForegroundColor Green
+    Write-Host "Pigsty.exe SHA-256:      $hashExe" -ForegroundColor Yellow
+    Write-Host "Zip SHA-256:             $hashZip" -ForegroundColor Yellow
     Write-Host "Size: $((Get-Item "$releaseDir\Pigsty.exe").Length / 1KB) KB" -ForegroundColor Green
 } else {
     Write-Error "Compiled executable not found at $sourceExe"
