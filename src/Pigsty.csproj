@@ -109,7 +109,6 @@
     <Compile Include="Helpers\RelayCommand.cs" />
     <Compile Include="Services\IMtpDeviceService.cs" />
     <Compile Include="Services\ShellMtpDeviceService.cs" />
-    <Compile Include="Services\DemoDeviceService.cs" />
     <Compile Include="UI\ConfirmDialog.xaml.cs">
       <DependentUpon>ConfirmDialog.xaml</DependentUpon>
     </Compile>

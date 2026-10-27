@@ -67,35 +67,31 @@ Automatically indexes and groups your phone's storage into clean, dedicated cate
 * Proportional multi-segment storage bar using muted pastel indicators.
 * Zero eye-straining neon colors, zero flashy animations, zero advertisements.
 
-### 6. 📱 Built-in Demo Mode
-* Don't have an Android device plugged in right now? Toggle **"Demo Mode"** with one click.
-* Loads a realistic **Google Pixel 8 Pro** simulation with pre-populated files, storage stats, and interactive export/import/delete operations.
-
 ---
 
 ## 🖥️ UI Layout Overview
 
 ```
 +---------------------------------------------------------------------------------------------+
-| 🐽 Pigsty [FREEWARE]          [Google Pixel 8 Pro (Demo) v] [● Connected] [🔄 Scan] [📱 Demo] [ℹ️ About] |
+| 🐽 Pigsty                     [Google Pixel 8 Pro v] [● Connected] [Scan]         [About]   |
 +---------------------------------------------------------------------------------------------+
-| Google Pixel 8 Pro • Internal shared storage                 84.2 GB used of 128.0 GB (43.8 GB free) |
-| [■ Photos 18.4GB][■ Videos 32.1GB][■ Audio 6.2GB][■ Docs 1.8GB][■ APKs 3.5GB][■ Free 43.8GB]       |
+| Google Pixel 8 Pro • Internal shared storage                 84.2 GB used of 128.0 GB       |
+| [■ Photos 18.4GB][■ Videos 32.1GB][■ Audio 6.2GB][■ Docs 1.8GB][■ APKs 3.5GB][■ Free 43.8GB] |
 +-------------------+-------------------------------------------------------------------------+
-| CATEGORIES        | 📸 Photos & Images • 120 items (4.2 GB)                 [🔍 Search files...   ] |
+| CATEGORIES        | Photos • 120 items (4.2 GB)                             [Search...    ] |
 |                   +-------------------------------------------------------------------------+
-| 📊 Dashboard      | [⬇️ Export to PC] [⬆️ Import Files] [🗑️ Delete Selected] | [☑️ Select All] [Sort v] |
-| 📸 Photos         +-------------------------------------------------------------------------+
-| 🎬 Videos         | [✓] | Type | Name                      | Category | Size    | Date Modified  |
-| 🎵 Audio          |-----+------+---------------------------+----------+---------+----------------|
-| 📄 Documents      | [x] | 📷   | PXL_20261024_124500.jpg   | Photos   | 4.3 MB  | 2026-10-24     |
-| 📦 APKs           | [x] | 📷   | PXL_20261024_141022.jpg   | Photos   | 5.1 MB  | 2026-10-24     |
-| 📥 Downloads      | [ ] | 📷   | Screenshot_20261025.png   | Photos   | 1.8 MB  | 2026-10-25     |
-| 🗃️ Archives       | [ ] | 📷   | Sunset_Coast.dng          | Photos   | 45.0 MB | 2026-10-20     |
-| ⚠️ Large Files    |                                                                         |
-| 📁 All Files      |                                                                         |
+| Overview          | [Export] [Import] [Delete] | [Select All] [Clear]           [Sort: Name v] |
+| Photos            +-------------------------------------------------------------------------+
+| Videos            | [✓] | Type | Name                      | Category | Size    | Date          |
+| Audio             |-----+------+---------------------------+----------+---------+---------------|
+| Documents         | [x] | 📷   | PXL_20261024_124500.jpg   | Photos   | 4.3 MB  | 2026-10-24    |
+| APKs              | [x] | 📷   | PXL_20261024_141022.jpg   | Photos   | 5.1 MB  | 2026-10-24    |
+| Downloads         | [ ] | 📷   | Screenshot_20261025.png   | Photos   | 1.8 MB  | 2026-10-25    |
+| Archives          | [ ] | 📷   | Sunset_Coast.dng          | Photos   | 45.0 MB | 2026-10-20    |
+| Large Files       |                                                                         |
+| All Files         |                                                                         |
 +-------------------+-------------------------------------------------------------------------+
-| Ready • 120 items indexed (4.2 GB)           Selected: 2 items (9.4 MB)        Pigsty v1.0 • Freeware |
+| Ready • 120 items indexed (4.2 GB)           Selected: 2 items (9.4 MB)        Pigsty v1.0.1  |
 +---------------------------------------------------------------------------------------------+
 ```
 
@@ -184,8 +180,7 @@ Pigsty/
     │   └── StorageStats.cs     # Aggregate storage calculations
     ├── Services/
     │   ├── IMtpDeviceService.cs     # Device management interface
-    │   ├── ShellMtpDeviceService.cs # Native Windows WPD / MTP service
-    │   └── DemoDeviceService.cs     # Realistic simulator for testing
+    │   └── ShellMtpDeviceService.cs # Native Windows WPD / MTP service
     ├── Helpers/
     │   ├── FileFormatHelper.cs # Extensions & category detection
     │   ├── PathSanitizer.cs    # Path traversal & deletion safety validation

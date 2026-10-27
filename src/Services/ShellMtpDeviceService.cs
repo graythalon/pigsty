@@ -67,8 +67,7 @@ namespace Pigsty.Services
                             var device = new AndroidDevice
                             {
                                 Id = path,
-                                Name = string.IsNullOrWhiteSpace(name) ? "Android Device" : name,
-                                IsDemo = false
+                                Name = string.IsNullOrWhiteSpace(name) ? "Android Device" : name
                             };
 
                             dynamic devFolder = item.GetFolder;

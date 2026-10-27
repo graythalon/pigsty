@@ -20,7 +20,6 @@ namespace Pigsty
     public partial class MainWindow : Window
     {
         private readonly ShellMtpDeviceService _mtpService;
-        private readonly DemoDeviceService _demoService;
         private IMtpDeviceService _currentService;
 
         private List<AndroidDevice> _connectedDevices;
@@ -28,7 +27,6 @@ namespace Pigsty
         private List<AndroidFileItem> _allDiscoveredFiles;
         private List<AndroidFileItem> _currentCategoryFiles;
         private CategoryType _currentCategory;
-        private bool _isDemoMode;
         private bool _isInitialized;
 
         public MainWindow()
@@ -37,23 +35,21 @@ namespace Pigsty
             _isInitialized = true;
 
             _mtpService = new ShellMtpDeviceService();
-            _demoService = new DemoDeviceService();
-            _currentService = _demoService;
+            _currentService = _mtpService;
 
             _allDiscoveredFiles = new List<AndroidFileItem>();
             _currentCategoryFiles = new List<AndroidFileItem>();
             _currentCategory = CategoryType.Overview;
-            _isDemoMode = true;
 
             Loaded += MainWindow_Loaded;
         }
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            await RefreshDevicesAsync(true);
+            await RefreshDevicesAsync();
         }
 
-        public async Task RefreshDevicesAsync(bool autoDemoIfEmpty)
+        public async Task RefreshDevicesAsync()
         {
             StatusBarStatusText.Text = "Scanning for connected Android devices...";
             RefreshDevicesButton.IsEnabled = false;
@@ -67,7 +63,6 @@ namespace Pigsty
                 if (realDevices != null && realDevices.Count > 0)
                 {
                     _connectedDevices = realDevices;
-                    _isDemoMode = false;
                     _currentService = _mtpService;
 
                     foreach (var dev in realDevices)
@@ -76,31 +71,17 @@ namespace Pigsty
                         DeviceComboBox.Items.Add(cbi);
                     }
                     DeviceComboBox.SelectedIndex = 0;
-                    UpdateConnectionUI(true, false);
+                    UpdateConnectionUI(true);
                 }
                 else
                 {
-                    if (autoDemoIfEmpty || _isDemoMode)
-                    {
-                        _isDemoMode = true;
-                        _currentService = _demoService;
-                        _connectedDevices = _demoService.DetectDevices();
-
-                        var cbi = new ComboBoxItem { Content = "Google Pixel 8 Pro (Demo)", Tag = _connectedDevices[0] };
-                        DeviceComboBox.Items.Add(cbi);
-                        DeviceComboBox.SelectedIndex = 0;
-                        UpdateConnectionUI(true, true);
-                    }
-                    else
-                    {
-                        _selectedDevice = null;
-                        _allDiscoveredFiles.Clear();
-                        _currentCategoryFiles.Clear();
-                        UpdateConnectionUI(false, false);
-                        StatusBarStatusText.Text = "No Android device detected. Connect via USB and choose MTP.";
-                        RefreshDevicesButton.IsEnabled = true;
-                        return;
-                    }
+                    _selectedDevice = null;
+                    _allDiscoveredFiles.Clear();
+                    _currentCategoryFiles.Clear();
+                    UpdateConnectionUI(false);
+                    StatusBarStatusText.Text = "No Android device detected. Connect via USB and choose 'File Transfer / MTP'.";
+                    RefreshDevicesButton.IsEnabled = true;
+                    return;
                 }
 
                 await ScanSelectedDeviceAsync();
@@ -115,31 +96,18 @@ namespace Pigsty
             }
         }
 
-        private void UpdateConnectionUI(bool isConnected, bool isDemo)
+        private void UpdateConnectionUI(bool isConnected)
         {
             if (isConnected)
             {
                 NoDeviceOverlay.Visibility = Visibility.Collapsed;
                 StorageOverviewPanel.Visibility = Visibility.Visible;
 
-                if (isDemo)
-                {
-                    StatusLabel.Text = "Demo Mode";
-                    StatusLabel.Foreground = (Brush)FindResource("ApksBrush");
-                    StatusDot.Fill = (Brush)FindResource("ApksBrush");
-                    ConnectionBadge.Background = new SolidColorBrush(Color.FromArgb(50, 251, 191, 36));
-                    ConnectionBadge.BorderBrush = (Brush)FindResource("ApksBrush");
-                    DemoModeButton.Content = "📱 Real Device";
-                }
-                else
-                {
-                    StatusLabel.Text = "MTP Connected";
-                    StatusLabel.Foreground = (Brush)FindResource("SuccessBrush");
-                    StatusDot.Fill = (Brush)FindResource("SuccessBrush");
-                    ConnectionBadge.Background = new SolidColorBrush(Color.FromArgb(50, 16, 185, 129));
-                    ConnectionBadge.BorderBrush = (Brush)FindResource("SuccessBrush");
-                    DemoModeButton.Content = "📱 Demo Mode";
-                }
+                StatusLabel.Text = "Connected";
+                StatusLabel.Foreground = (Brush)FindResource("SuccessBrush");
+                StatusDot.Fill = (Brush)FindResource("SuccessBrush");
+                ConnectionBadge.Background = new SolidColorBrush(Color.FromArgb(40, 16, 185, 129));
+                ConnectionBadge.BorderBrush = (Brush)FindResource("SuccessBrush");
             }
             else
             {
@@ -623,15 +591,7 @@ namespace Pigsty
 
             StatusBarStatusText.Text = string.Format("Deleted {0} file(s), freed {1}", deletedCount, SizeFormatter.FormatBytes(totalBytes));
 
-            if (!_isDemoMode)
-            {
-                await ScanSelectedDeviceAsync();
-            }
-            else
-            {
-                UpdateStorageOverview();
-                ApplyCategoryFilter();
-            }
+            await ScanSelectedDeviceAsync();
 
             MessageBox.Show(this,
                 string.Format("Successfully deleted {0} file(s) from device, freeing {1}.", deletedCount, SizeFormatter.FormatBytes(totalBytes)),
@@ -723,13 +683,7 @@ namespace Pigsty
 
         private async void RefreshDevicesButton_Click(object sender, RoutedEventArgs e)
         {
-            await RefreshDevicesAsync(false);
-        }
-
-        private async void DemoModeButton_Click(object sender, RoutedEventArgs e)
-        {
-            _isDemoMode = !_isDemoMode;
-            await RefreshDevicesAsync(true);
+            await RefreshDevicesAsync();
         }
 
         private void DeviceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -770,16 +724,11 @@ namespace Pigsty
 
         private void AboutButton_Click(object sender, RoutedEventArgs e)
         {
-            string info = "Pigsty - Android Storage Manager for Windows\n" +
-                          "Version 1.0 (Freeware)\n\n" +
-                          "Why Pigsty?\n" +
-                          "• ZERO Developer Options or USB Debugging needed!\n" +
-                          "• Uses native Windows Portable Devices (WPD / MTP) protocol directly.\n" +
-                          "• Organizes phone storage into Photos, Videos, Audio, Docs, APKs, Downloads, & Large Files.\n" +
-                          "• Export, import, and delete files with ease.\n\n" +
-                          "Connection Tip:\n" +
-                          "Plug in your Android phone via USB, unlock your phone, and select 'File Transfer' (MTP) in the USB notification.\n\n" +
-                          "Freeware License: MIT\n" +
+            string info = "Pigsty - Android Storage Manager for Windows\n\n" +
+                          "Manage files on your Android device over USB without Developer Options.\n\n" +
+                          "• Native Windows MTP integration\n" +
+                          "• Categorized storage view & fast file operations\n" +
+                          "• Safe file export, import, and deletion\n\n" +
                           "Repository: https://github.com/graythalon/pigsty.git";
 
             MessageBox.Show(this, info, "About Pigsty", MessageBoxButton.OK, MessageBoxImage.Information);

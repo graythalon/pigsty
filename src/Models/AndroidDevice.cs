@@ -20,7 +20,6 @@ namespace Pigsty.Models
         private string _storageName;
         private long _totalSpaceBytes;
         private long _freeSpaceBytes;
-        private bool _isDemo;
 
         public AndroidDevice()
         {
@@ -66,18 +65,6 @@ namespace Pigsty.Models
             }
         }
 
-        public bool IsDemo
-        {
-            get { return _isDemo; }
-            set
-            {
-                if (_isDemo != value)
-                {
-                    _isDemo = value;
-                    OnPropertyChanged("IsDemo");
-                }
-            }
-        }
 
         public long TotalSpaceBytes
         {
