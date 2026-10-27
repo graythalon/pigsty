@@ -538,7 +538,8 @@
                 </ScrollViewer>
 
                 <!-- VIEW 2: CATEGORY FILE LIST VIEW -->
-                <Grid x:Name="CategoryFileListView" Visibility="Collapsed">
+                <Grid x:Name="CategoryFileListView" Visibility="Collapsed" AllowDrop="True"
+                      DragEnter="CategoryFileListView_DragEnter" Drop="CategoryFileListView_Drop">
                     <Grid.RowDefinitions>
                         <!-- Category Header & Controls -->
                         <RowDefinition Height="Auto" />

@@ -578,9 +578,23 @@ namespace Pigsty
                 return;
             }
 
-            long totalBytes = selectedFiles.Sum(f => f.SizeBytes);
+            // SAFETY CHECK: Filter out protected system and directory items
+            var safeFilesToDelete = selectedFiles.Where(f => PathSanitizer.IsSafeDeletionTarget(f)).ToList();
+            if (safeFilesToDelete.Count == 0)
+            {
+                MessageBox.Show(this, "The selected item(s) cannot be deleted because they are protected system folders or directories. Only files can be deleted.", "Protected Target", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            long totalBytes = safeFilesToDelete.Sum(f => f.SizeBytes);
             string msg = string.Format("Permanently delete {0} file(s) ({1}) from your Android device?\n\nThis will free up internal storage on your phone. This action cannot be undone.",
-                selectedFiles.Count, SizeFormatter.FormatBytes(totalBytes));
+                safeFilesToDelete.Count, SizeFormatter.FormatBytes(totalBytes));
+
+            if (safeFilesToDelete.Count < selectedFiles.Count)
+            {
+                msg = string.Format("Notice: {0} protected folder(s) were excluded from deletion.\n\n" + msg,
+                    selectedFiles.Count - safeFilesToDelete.Count);
+            }
 
             var confirmDlg = new ConfirmDialog("Confirm Permanent Deletion", msg, "Delete Permanently", true);
             confirmDlg.Owner = this;
@@ -592,7 +606,7 @@ namespace Pigsty
             var progressDlg = new ProgressDialog("Deleting files from Android...");
             progressDlg.Owner = this;
 
-            var deleteTask = _currentService.DeleteFilesAsync(selectedFiles, (curr, tot, item) =>
+            var deleteTask = _currentService.DeleteFilesAsync(safeFilesToDelete, (curr, tot, item) =>
             {
                 progressDlg.UpdateProgress(curr, tot, item);
             });
@@ -616,6 +630,75 @@ namespace Pigsty
             MessageBox.Show(this,
                 string.Format("Successfully deleted {0} file(s) from device, freeing {1}.", deletedCount, SizeFormatter.FormatBytes(totalBytes)),
                 "Deletion Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void CategoryFileListView_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                e.Effects = DragDropEffects.Copy;
+            }
+            else
+            {
+                e.Effects = DragDropEffects.None;
+            }
+            e.Handled = true;
+        }
+
+        private async void CategoryFileListView_Drop(object sender, DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+
+            string[] files = e.Data.GetData(DataFormats.FileDrop) as string[];
+            if (files == null || files.Length == 0) return;
+
+            if (_selectedDevice == null)
+            {
+                MessageBox.Show(this, "No Android device is currently selected.", "Pigsty", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var validFiles = files.Where(f => File.Exists(f)).ToList();
+            if (validFiles.Count == 0) return;
+
+            string targetFolder = "Download";
+            switch (_currentCategory)
+            {
+                case CategoryType.Photos: targetFolder = "DCIM"; break;
+                case CategoryType.Videos: targetFolder = "Movies"; break;
+                case CategoryType.Audio: targetFolder = "Music"; break;
+                case CategoryType.Documents: targetFolder = "Documents"; break;
+                default: targetFolder = "Download"; break;
+            }
+
+            var importDlg = new ImportDialog(validFiles.Count);
+            importDlg.Owner = this;
+            if (importDlg.ShowDialog() != true || !importDlg.IsConfirmed)
+            {
+                return;
+            }
+
+            targetFolder = importDlg.SelectedTargetFolder;
+
+            var progressDlg = new ProgressDialog("Importing dropped files to Android...");
+            progressDlg.Owner = this;
+
+            var importTask = _currentService.ImportFilesAsync(_selectedDevice, validFiles, targetFolder, (curr, tot, item) =>
+            {
+                progressDlg.UpdateProgress(curr, tot, item);
+            });
+
+            progressDlg.Show();
+            int importedCount = await importTask;
+            progressDlg.Close();
+
+            StatusBarStatusText.Text = string.Format("Imported {0} file(s) to Android ({1})", importedCount, targetFolder);
+
+            MessageBox.Show(this,
+                string.Format("Successfully imported {0} file(s) to '{1}' on your Android device.", importedCount, targetFolder),
+                "Import Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+
+            await ScanSelectedDeviceAsync();
         }
 
         private void ViewAllLargeFilesButton_Click(object sender, RoutedEventArgs e)

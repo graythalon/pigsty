@@ -135,28 +135,27 @@ namespace Pigsty.Services
         {
             return Task.Factory.StartNew(new Func<int>(() =>
             {
-                if (!Directory.Exists(destinationFolder))
-                {
-                    Directory.CreateDirectory(destinationFolder);
-                }
+                if (files == null || files.Count == 0) return 0;
 
                 int exportedCount = 0;
                 for (int i = 0; i < files.Count; i++)
                 {
                     var file = files[i];
+                    if (file == null) continue;
+
+                    string safeDestPath = PathSanitizer.GetSafeExportPath(destinationFolder, file.Name);
+
                     if (progressCallback != null)
                     {
-                        progressCallback(i + 1, files.Count, file.Name);
+                        progressCallback(i + 1, files.Count, Path.GetFileName(safeDestPath));
                     }
 
-                    string targetPath = Path.Combine(destinationFolder, file.Name);
-                    // Write sample payload file for demo
                     string sampleInfo = string.Format("Pigsty Demo Exported File\r\nName: {0}\r\nOriginal Size: {1}\r\nDate: {2}\r\nPath: {3}",
                         file.Name, file.FormattedSize, file.FormattedDate, file.DirectoryPath);
-                    File.WriteAllText(targetPath, sampleInfo);
+                    File.WriteAllText(safeDestPath, sampleInfo);
 
                     exportedCount++;
-                    System.Threading.Thread.Sleep(100);
+                    System.Threading.Thread.Sleep(60);
                 }
 
                 return exportedCount;
@@ -167,6 +166,8 @@ namespace Pigsty.Services
         {
             return Task.Factory.StartNew(new Func<int>(() =>
             {
+                if (sourceFilePaths == null || sourceFilePaths.Count == 0) return 0;
+
                 int importedCount = 0;
                 for (int i = 0; i < sourceFilePaths.Count; i++)
                 {
@@ -187,7 +188,7 @@ namespace Pigsty.Services
 
                     device.FreeSpaceBytes -= fi.Length;
                     importedCount++;
-                    System.Threading.Thread.Sleep(100);
+                    System.Threading.Thread.Sleep(60);
                 }
 
                 return importedCount;
@@ -198,10 +199,20 @@ namespace Pigsty.Services
         {
             return Task.Factory.StartNew(new Func<int>(() =>
             {
+                if (files == null || files.Count == 0) return 0;
+
                 int deletedCount = 0;
                 for (int i = 0; i < files.Count; i++)
                 {
                     var file = files[i];
+                    if (file == null) continue;
+
+                    // STRICT SAFETY CHECK
+                    if (!PathSanitizer.IsSafeDeletionTarget(file))
+                    {
+                        continue;
+                    }
+
                     if (progressCallback != null)
                     {
                         progressCallback(i + 1, files.Count, file.Name);
@@ -210,7 +221,7 @@ namespace Pigsty.Services
                     _cachedDemoFiles.Remove(file);
                     _demoDevice.FreeSpaceBytes += file.SizeBytes;
                     deletedCount++;
-                    System.Threading.Thread.Sleep(50);
+                    System.Threading.Thread.Sleep(40);
                 }
 
                 return deletedCount;

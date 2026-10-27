@@ -56,20 +56,29 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-# Create dist directory
+# Create dist and release directories
 $distDir = Join-Path $PSScriptRoot "dist"
-if (Test-Path $distDir) {
-    Remove-Item -Recurse -Force $distDir
-}
-New-Item -ItemType Directory -Force -Path $distDir | Out-Null
+$releaseDir = Join-Path $PSScriptRoot "release"
 
-# Copy standalone Pigsty.exe to dist
+if (Test-Path $distDir) { Remove-Item -Recurse -Force $distDir }
+if (Test-Path $releaseDir) { Remove-Item -Recurse -Force $releaseDir }
+
+New-Item -ItemType Directory -Force -Path $distDir | Out-Null
+New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
+
+# Copy standalone Pigsty.exe to dist and release
 $sourceExe = Join-Path $PSScriptRoot "bin\Release\Pigsty.exe"
 if (Test-Path $sourceExe) {
     Copy-Item $sourceExe (Join-Path $distDir "Pigsty.exe")
-    Write-Host "`n[SUCCESS] Pigsty build complete!" -ForegroundColor Green
-    Write-Host "Output: $distDir\Pigsty.exe" -ForegroundColor Green
-    Write-Host "Size: $((Get-Item "$distDir\Pigsty.exe").Length / 1KB) KB" -ForegroundColor Green
+    Copy-Item $sourceExe (Join-Path $releaseDir "Pigsty.exe")
+
+    $hash = (Get-FileHash "$releaseDir\Pigsty.exe" -Algorithm SHA256).Hash
+    Set-Content -Path (Join-Path $releaseDir "SHA256SUMS.txt") -Value "$hash *Pigsty.exe"
+
+    Write-Host "`n[SUCCESS] Pigsty build and release packaging complete!" -ForegroundColor Green
+    Write-Host "Portable Single Binary: $releaseDir\Pigsty.exe" -ForegroundColor Green
+    Write-Host "SHA-256 Checksum: $hash" -ForegroundColor Yellow
+    Write-Host "Size: $((Get-Item "$releaseDir\Pigsty.exe").Length / 1KB) KB" -ForegroundColor Green
 } else {
     Write-Error "Compiled executable not found at $sourceExe"
     exit 1

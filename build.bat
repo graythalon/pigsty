@@ -23,9 +23,12 @@ if %ERRORLEVEL% neq 0 (
 )
 
 if not exist dist mkdir dist
+if not exist release mkdir release
 copy /y bin\Release\Pigsty.exe dist\Pigsty.exe >nul
+copy /y bin\Release\Pigsty.exe release\Pigsty.exe >nul
 
 echo.
-echo [SUCCESS] Build succeeded! Executable located at: dist\Pigsty.exe
+echo [SUCCESS] Build succeeded!
+echo Single Portable EXE: release\Pigsty.exe
 echo.
 pause

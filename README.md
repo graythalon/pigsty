@@ -51,13 +51,23 @@ Automatically indexes and groups your phone's storage into clean, dedicated cate
 * **🔍 Instant Search & Filter**: Real-time search by file name, extension, or directory path.
 * **⚡ Sorting**: Sort by Name (A-Z), Size (Largest / Smallest First), or Date Modified (Newest / Oldest First).
 
-### 4. 🎨 Proper UI Without Flashy Colors
+### 4. 🛡️ Safe, Secure & Resilient Architecture
+* **Accidental Data Loss Safeguards**: Strict validation prevents deletion of protected Android system folders (`\Android`, `\Android\data`, root storage volumes). Only individual user files can be deleted with explicit confirmation.
+* **Path Traversal & Sanitization**: Automatically sanitizes filenames containing characters valid on Linux/Android but illegal on Windows (`:`, `*`, `?`, `"`, `<`, `>`, `|`), preventing path crashes and corrupted writes.
+* **Duplicate Protection**: Avoids silent overwrites during export by automatically appending safe numbering `(1)`, `(2)`.
+* **MTP Driver Buffer Protection**: Throttles operations and handles Windows Portable Devices buffers to avoid 0x80004005 USB driver lockups.
+* **Graceful Disconnection Recovery**: Unplugging the USB cable during an operation is caught gracefully without crashing the app.
+* **Least-Privilege Execution**: Uses standard user permissions (`asInvoker`) — no administrator privileges required.
+* **Drag & Drop Support**: Drag files directly from your PC into Pigsty to import them to your Android device instantly.
+* **High-DPI PerMonitorV2 Aware**: Crisp rendering on 1080p, 1440p, and 4K displays.
+
+### 5. 🎨 Proper UI Without Flashy Colors
 * Built with a restrained, distraction-free **Modern Slate aesthetic** (`#14161C` background, `#1D2028` panels, `#3B82F6` calm slate blue accent).
 * High-contrast, clean Segoe UI typography with clear hierarchy.
 * Proportional multi-segment storage bar using muted pastel indicators.
 * Zero eye-straining neon colors, zero flashy animations, zero advertisements.
 
-### 5. 📱 Built-in Demo Mode
+### 6. 📱 Built-in Demo Mode
 * Don't have an Android device plugged in right now? Toggle **"Demo Mode"** with one click.
 * Loads a realistic **Google Pixel 8 Pro** simulation with pre-populated files, storage stats, and interactive export/import/delete operations.
 
@@ -99,12 +109,17 @@ Automatically indexes and groups your phone's storage into clean, dedicated cate
 * *.NET Framework 4.7.2 or higher* (pre-installed on almost all Windows 10/11 machines).
 * **NO Android SDK, NO ADB, and NO Developer Options required!**
 
-### How to Connect Your Device
-1. Connect your Android device to your PC using a USB cable.
-2. Unlock your phone.
-3. Swipe down from the top of your screen to open the notification drawer.
-4. Tap the **"Charging this device via USB"** notification and select **"File Transfer"** (or **"MTP"**).
-5. Open **Pigsty** and click **🔄 Scan** if not automatically detected.
+### Running the Single Portable Executable (No Install Required)
+Pigsty is a 100% portable, standalone freeware app. Simply download and double-click:
+```
+release\Pigsty.exe
+```
+No installation, no registry pollution, no admin rights, and no dependencies needed. You can run it directly from your Downloads folder, Desktop, or a USB thumb drive.
+
+### Optional 1-Click Installation (If You Prefer an Installed App)
+If you prefer a permanent Desktop shortcut, Start Menu entry, and Windows Settings integration:
+* Run `install.bat` — copies Pigsty to your local user app directory and creates shortcuts.
+* Run `uninstall.bat` — cleanly uninstalls shortcuts and local files at any time.
 
 ---
 
@@ -123,11 +138,12 @@ build.bat
 ```
 
 ### Output
-The compiled standalone executable will be generated at:
+The compiled standalone executable and verified checksum are generated at:
 ```
-dist\Pigsty.exe
+release\
+├── Pigsty.exe          # Single portable Windows freeware binary (~120 KB)
+└── SHA256SUMS.txt      # Cryptographic SHA-256 integrity hash
 ```
-This is a single, portable executable that can be run directly from any folder or USB flash drive without an installer.
 
 ---
 
@@ -149,14 +165,18 @@ Pigsty/
 ├── README.md                # Comprehensive documentation
 ├── build.bat                # 1-Click batch build script
 ├── build.ps1                # PowerShell build and packaging script
-├── dist/                    # Standalone executable output
-│   └── Pigsty.exe           # Single portable Windows freeware binary
+├── install.bat              # Optional 1-click desktop & start menu installer
+├── uninstall.bat            # Clean 1-click uninstaller
+├── release/                 # Standalone release output
+│   ├── Pigsty.exe           # Single portable Windows freeware binary (~120 KB)
+│   └── SHA256SUMS.txt       # Cryptographic SHA-256 integrity checksum
 └── src/                     # C# / WPF Source Code
     ├── Pigsty.csproj        # MSBuild project file
+    ├── app.manifest         # High-DPI & Windows 10/11 security manifest
     ├── App.xaml             # Application definitions
     ├── App.xaml.cs          # Application entry point
     ├── MainWindow.xaml      # Main user interface
-    ├── MainWindow.xaml.cs   # Core UI & business logic
+    ├── MainWindow.xaml.cs   # Core UI, drag-drop, & file operations
     ├── Models/
     │   ├── AndroidDevice.cs    # Device and volume model
     │   ├── AndroidFileItem.cs  # File item and metadata model
@@ -168,6 +188,7 @@ Pigsty/
     │   └── DemoDeviceService.cs     # Realistic simulator for testing
     ├── Helpers/
     │   ├── FileFormatHelper.cs # Extensions & category detection
+    │   ├── PathSanitizer.cs    # Path traversal & deletion safety validation
     │   ├── SizeFormatter.cs    # Human-readable byte formatting
     │   └── RelayCommand.cs     # MVVM command helper
     ├── UI/

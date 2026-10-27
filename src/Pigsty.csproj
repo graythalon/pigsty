@@ -12,6 +12,7 @@
     <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -102,6 +103,7 @@
     <Compile Include="Models\StorageCategory.cs" />
     <Compile Include="Models\StorageStats.cs" />
     <Compile Include="Helpers\FileFormatHelper.cs" />
+    <Compile Include="Helpers\PathSanitizer.cs" />
     <Compile Include="Helpers\SizeFormatter.cs" />
     <Compile Include="Helpers\RelayCommand.cs" />
     <Compile Include="Services\IMtpDeviceService.cs" />
@@ -117,6 +119,7 @@
       <DependentUpon>ImportDialog.xaml</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <None Include="app.manifest" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
