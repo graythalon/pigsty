@@ -9,7 +9,7 @@
 $ErrorActionPreference = "Stop"
 
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host " Pigsty v1.0.0 - Android Storage Manager Build" -ForegroundColor Cyan
+Write-Host " Pigsty v1.0.3 - Android Storage Manager Build" -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
 # Locate MSBuild

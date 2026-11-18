@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -23,7 +24,58 @@ namespace Pigsty.Services
         // 1024 = FOF_NOERRORUI
         private const int ShellCopyFlags = 4 | 16 | 512 | 1024;
 
-        public List<AndroidDevice> DetectDevices()
+        private readonly BlockingCollection<Action> _staQueue = new BlockingCollection<Action>();
+        private readonly Thread _staThread;
+
+        public ShellMtpDeviceService()
+        {
+            _staThread = new Thread(StaWorkerLoop)
+            {
+                Name = "Pigsty-MTP-STA-Worker",
+                IsBackground = true
+            };
+            _staThread.SetApartmentState(ApartmentState.STA);
+            _staThread.Start();
+        }
+
+        private void StaWorkerLoop()
+        {
+            foreach (var work in _staQueue.GetConsumingEnumerable())
+            {
+                try
+                {
+                    work();
+                }
+                catch
+                {
+                }
+            }
+        }
+
+        private Task<T> RunOnStaAsync<T>(Func<T> func)
+        {
+            var tcs = new TaskCompletionSource<T>();
+            _staQueue.Add(() =>
+            {
+                try
+                {
+                    T result = func();
+                    tcs.TrySetResult(result);
+                }
+                catch (Exception ex)
+                {
+                    tcs.TrySetException(ex);
+                }
+            });
+            return tcs.Task;
+        }
+
+        public Task<List<AndroidDevice>> DetectDevicesAsync()
+        {
+            return RunOnStaAsync(() => DetectDevicesInternal());
+        }
+
+        private List<AndroidDevice> DetectDevicesInternal()
         {
             var devices = new List<AndroidDevice>();
 
@@ -39,7 +91,8 @@ namespace Pigsty.Services
                 dynamic items = myComputer.Items();
                 if (items == null) return devices;
 
-                for (int i = 0; i < items.Count; i++)
+                int count = items.Count;
+                for (int i = 0; i < count; i++)
                 {
                     try
                     {
@@ -50,16 +103,16 @@ namespace Pigsty.Services
                         string type = Convert.ToString(item.Type) ?? "";
                         string name = Convert.ToString(item.Name) ?? "";
 
-                        // Check if it is a portable device (MTP / WPD)
                         bool isDriveLetter = path.Length >= 2 && path[1] == ':' && (path.Length == 2 || path.Length == 3);
                         bool isPortable = !isDriveLetter && (
                             type.IndexOf("Portable", StringComparison.OrdinalIgnoreCase) >= 0 ||
                             type.IndexOf("Device", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                            type.IndexOf("Phone", StringComparison.OrdinalIgnoreCase) >= 0 ||
                             type.IndexOf("Camera", StringComparison.OrdinalIgnoreCase) >= 0 ||
                             type.IndexOf("Media", StringComparison.OrdinalIgnoreCase) >= 0 ||
                             path.IndexOf("::{20D04FE0-3AEA-1069-A2D8-08002B30309D}", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                            path.StartsWith("::{") ||
-                            path.StartsWith(@"\\?\usb")
+                            path.StartsWith("::{", StringComparison.Ordinal) ||
+                            path.StartsWith(@"\\?\usb", StringComparison.OrdinalIgnoreCase)
                         );
 
                         if (isPortable)
@@ -67,7 +120,7 @@ namespace Pigsty.Services
                             var device = new AndroidDevice
                             {
                                 Id = path,
-                                Name = string.IsNullOrWhiteSpace(name) ? "Android Device" : name
+                                Name = string.IsNullOrWhiteSpace(name) ? "Android" : name.Trim()
                             };
 
                             dynamic devFolder = item.GetFolder;
@@ -77,19 +130,31 @@ namespace Pigsty.Services
                                 dynamic subItems = devFolder.Items();
                                 if (subItems != null)
                                 {
-                                    for (int j = 0; j < subItems.Count; j++)
+                                    int subCount = subItems.Count;
+                                    for (int j = 0; j < subCount; j++)
                                     {
                                         try
                                         {
                                             dynamic subItem = subItems.Item(j);
-                                            string subName = Convert.ToString(subItem.Name);
+                                            if (subItem == null) continue;
+
+                                            string subName = Convert.ToString(subItem.Name) ?? "Storage";
                                             dynamic subFolder = subItem.GetFolder;
+                                            if (subFolder == null) continue;
 
-                                            string totalStr = Convert.ToString(devFolder.GetDetailsOf(subItem, 2));
-                                            string freeStr = Convert.ToString(devFolder.GetDetailsOf(subItem, 3));
+                                            long totalBytes = TryReadExtendedLong(subItem, "System.Capacity");
+                                            long freeBytes = TryReadExtendedLong(subItem, "System.FreeSpace");
 
-                                            long totalBytes = SizeFormatter.ParseSizeString(totalStr);
-                                            long freeBytes = SizeFormatter.ParseSizeString(freeStr);
+                                            if (totalBytes <= 0)
+                                            {
+                                                string totalStr = Convert.ToString(devFolder.GetDetailsOf(subItem, 2));
+                                                totalBytes = SizeFormatter.ParseSizeString(totalStr);
+                                            }
+                                            if (freeBytes <= 0)
+                                            {
+                                                string freeStr = Convert.ToString(devFolder.GetDetailsOf(subItem, 3));
+                                                freeBytes = SizeFormatter.ParseSizeString(freeStr);
+                                            }
 
                                             var vol = new StorageVolumeInfo
                                             {
@@ -110,16 +175,9 @@ namespace Pigsty.Services
                                         }
                                         catch
                                         {
-                                            // Individual sub-volume access error
                                         }
                                     }
                                 }
-                            }
-
-                            if (device.TotalSpaceBytes <= 0)
-                            {
-                                device.TotalSpaceBytes = 64L * 1024L * 1024L * 1024L;
-                                device.FreeSpaceBytes = 28L * 1024L * 1024L * 1024L;
                             }
 
                             devices.Add(device);
@@ -127,25 +185,38 @@ namespace Pigsty.Services
                     }
                     catch (COMException)
                     {
-                        // Device disconnected mid-check
                     }
                     catch
                     {
-                        // General fallback
                     }
                 }
             }
             catch
             {
-                // COM initialization error
             }
 
             return devices;
         }
 
-        public Task<List<AndroidFileItem>> ScanFilesAsync(AndroidDevice device, Action<string, int> progressCallback)
+        private static long TryReadExtendedLong(dynamic shellItem, string propName)
         {
-            return Task.Factory.StartNew(new Func<List<AndroidFileItem>>(() =>
+            try
+            {
+                object val = shellItem.ExtendedProperty(propName);
+                if (val != null)
+                {
+                    return Convert.ToInt64(val);
+                }
+            }
+            catch
+            {
+            }
+            return 0;
+        }
+
+        public Task<List<AndroidFileItem>> ScanFilesAsync(AndroidDevice device, Action<string, int> progressCallback, Func<bool> isCancelled = null)
+        {
+            return RunOnStaAsync(() =>
             {
                 var result = new List<AndroidFileItem>();
                 if (device == null || device.StorageVolumes == null || device.StorageVolumes.Count == 0)
@@ -156,6 +227,8 @@ namespace Pigsty.Services
                 int totalVolumes = device.StorageVolumes.Count;
                 for (int v = 0; v < totalVolumes; v++)
                 {
+                    if (isCancelled != null && isCancelled()) break;
+
                     var vol = device.StorageVolumes[v];
                     if (vol.ShellFolder == null) continue;
 
@@ -167,37 +240,22 @@ namespace Pigsty.Services
 
                     try
                     {
-                        ScanFolderRecursive(vol.ShellFolder, @"\" + volName, 0, 5, result, progressCallback);
+                        ScanFolderRecursive(vol.ShellFolder, @"\" + volName, 0, 6, result, progressCallback, isCancelled);
                     }
                     catch (COMException)
                     {
-                        if (progressCallback != null)
-                        {
-                            progressCallback("Device communication interrupted.", 100);
-                        }
                         break;
                     }
                 }
 
-                if (progressCallback != null)
-                {
-                    progressCallback(string.Format("Scan complete. Found {0} items.", result.Count), 100);
-                }
-
-                try
-                {
-                    GC.Collect();
-                    GC.WaitForPendingFinalizers();
-                }
-                catch { }
-
                 return result;
-            }));
+            });
         }
 
-        private void ScanFolderRecursive(dynamic folder, string currentPath, int depth, int maxDepth, List<AndroidFileItem> result, Action<string, int> progressCallback)
+        private void ScanFolderRecursive(dynamic folder, string currentPath, int depth, int maxDepth, List<AndroidFileItem> result, Action<string, int> progressCallback, Func<bool> isCancelled)
         {
             if (folder == null || depth > maxDepth) return;
+            if (isCancelled != null && isCancelled()) return;
 
             try
             {
@@ -207,6 +265,8 @@ namespace Pigsty.Services
                 int count = items.Count;
                 for (int i = 0; i < count; i++)
                 {
+                    if (isCancelled != null && isCancelled()) return;
+
                     try
                     {
                         dynamic item = items.Item(i);
@@ -215,8 +275,7 @@ namespace Pigsty.Services
                         string itemName = Convert.ToString(item.Name) ?? "";
                         if (string.IsNullOrEmpty(itemName)) continue;
 
-                        // Skip hidden or cache folders
-                        if (itemName.StartsWith(".") && itemName != ".nomedia") continue;
+                        if (itemName.StartsWith(".", StringComparison.Ordinal) && itemName != ".nomedia") continue;
                         if (SkipFolderNames.Contains(itemName)) continue;
 
                         bool isFolder = false;
@@ -240,35 +299,48 @@ namespace Pigsty.Services
                                 if (subFolder != null)
                                 {
                                     string subPath = currentPath + @"\" + itemName;
-                                    if (progressCallback != null && (result.Count % 50 == 0))
+                                    if (progressCallback != null && (result.Count % 60 == 0))
                                     {
-                                        progressCallback(string.Format("Scanning {0}...", subPath), 50);
+                                        progressCallback(string.Format("Scanning {0}", itemName), 50);
                                     }
-                                    ScanFolderRecursive(subFolder, subPath, depth + 1, maxDepth, result, progressCallback);
+                                    ScanFolderRecursive(subFolder, subPath, depth + 1, maxDepth, result, progressCallback, isCancelled);
                                 }
                             }
                         }
                         else
                         {
-                            long size = 0;
-                            try
-                            {
-                                size = (long)item.Size;
-                            }
-                            catch
+                            long size = TryReadExtendedLong(item, "System.Size");
+                            if (size <= 0)
                             {
                                 try
                                 {
-                                    string sizeStr = Convert.ToString(folder.GetDetailsOf(item, 1));
-                                    size = SizeFormatter.ParseSizeString(sizeStr);
+                                    size = Convert.ToInt64(item.Size);
                                 }
-                                catch { }
+                                catch
+                                {
+                                    try
+                                    {
+                                        string sizeStr = Convert.ToString(folder.GetDetailsOf(item, 1));
+                                        size = SizeFormatter.ParseSizeString(sizeStr);
+                                    }
+                                    catch { }
+                                }
                             }
+                            if (size < 0) size = 0;
 
                             DateTime? modDate = null;
                             try
                             {
-                                modDate = (DateTime)item.ModifyDate;
+                                object extDate = item.ExtendedProperty("System.DateModified");
+                                if (extDate is DateTime)
+                                {
+                                    modDate = ((DateTime)extDate).ToLocalTime();
+                                }
+                                else
+                                {
+                                    DateTime dt = (DateTime)item.ModifyDate;
+                                    if (dt.Year > 1980) modDate = dt;
+                                }
                             }
                             catch { }
 
@@ -292,42 +364,46 @@ namespace Pigsty.Services
                     }
                     catch (COMException)
                     {
-                        // Item level COM error - device unplugged or file locked
                     }
                     catch
                     {
-                        // Skip corrupted metadata
                     }
                 }
             }
             catch (COMException)
             {
-                throw; // Rethrow to stop traversal on disconnected device
+                throw;
             }
             catch
             {
-                // Folder enumeration error
             }
         }
 
-        public Task<int> ExportFilesAsync(List<AndroidFileItem> files, string destinationFolder, Action<int, int, string> progressCallback)
+        public Task<int> ExportFilesAsync(List<AndroidFileItem> files, string destinationFolder, Action<int, int, string> progressCallback, Func<bool> isCancelled = null)
         {
-            return Task.Factory.StartNew(new Func<int>(() =>
+            return RunOnStaAsync(() =>
             {
                 if (files == null || files.Count == 0) return 0;
+                if (!PathSanitizer.IsValidDestinationDirectory(destinationFolder)) return 0;
 
-                if (!Directory.Exists(destinationFolder))
+                string fullDest = Path.GetFullPath(destinationFolder);
+                if (!Directory.Exists(fullDest))
                 {
-                    Directory.CreateDirectory(destinationFolder);
+                    Directory.CreateDirectory(fullDest);
                 }
 
                 Type shellType = Type.GetTypeFromProgID("Shell.Application");
+                if (shellType == null) return 0;
+
                 dynamic shell = Activator.CreateInstance(shellType);
-                dynamic dstFolder = shell.NameSpace(destinationFolder);
+                dynamic dstFolder = shell.NameSpace(fullDest);
+                if (dstFolder == null) return 0;
 
                 int exportedCount = 0;
                 for (int i = 0; i < files.Count; i++)
                 {
+                    if (isCancelled != null && isCancelled()) break;
+
                     var file = files[i];
                     if (file == null || file.ShellItem == null) continue;
 
@@ -339,12 +415,9 @@ namespace Pigsty.Services
 
                     try
                     {
-                        if (dstFolder != null)
-                        {
-                            dstFolder.CopyHere(file.ShellItem, ShellCopyFlags);
-                            exportedCount++;
-                            Thread.Sleep(60);
-                        }
+                        dstFolder.CopyHere(file.ShellItem, ShellCopyFlags);
+                        exportedCount++;
+                        Thread.Sleep(50);
                     }
                     catch (COMException ex)
                     {
@@ -355,19 +428,18 @@ namespace Pigsty.Services
                     }
                     catch
                     {
-                        // Copy failure for this specific item
                     }
                 }
 
                 return exportedCount;
-            }));
+            });
         }
 
-        public Task<int> ImportFilesAsync(AndroidDevice device, List<string> sourceFilePaths, string targetFolderName, Action<int, int, string> progressCallback)
+        public Task<int> ImportFilesAsync(AndroidDevice device, List<string> sourceFilePaths, string targetFolderName, Action<int, int, string> progressCallback, Func<bool> isCancelled = null)
         {
-            return Task.Factory.StartNew(new Func<int>(() =>
+            return RunOnStaAsync(() =>
             {
-                if (device == null || device.StorageVolumes == null || device.StorageVolumes.Count == 0)
+                if (device == null || device.StorageVolumes == null || device.StorageVolumes.Count == 0 || sourceFilePaths == null)
                 {
                     return 0;
                 }
@@ -381,13 +453,17 @@ namespace Pigsty.Services
                     try
                     {
                         dynamic items = primaryStorage.Items();
-                        for (int i = 0; i < items.Count; i++)
+                        if (items != null)
                         {
-                            dynamic sub = items.Item(i);
-                            if (string.Equals(Convert.ToString(sub.Name), targetFolderName, StringComparison.OrdinalIgnoreCase))
+                            int count = items.Count;
+                            for (int i = 0; i < count; i++)
                             {
-                                targetFolder = sub.GetFolder;
-                                break;
+                                dynamic sub = items.Item(i);
+                                if (sub != null && string.Equals(Convert.ToString(sub.Name), targetFolderName, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    targetFolder = sub.GetFolder;
+                                    break;
+                                }
                             }
                         }
                     }
@@ -402,8 +478,10 @@ namespace Pigsty.Services
                 int importedCount = 0;
                 for (int i = 0; i < sourceFilePaths.Count; i++)
                 {
+                    if (isCancelled != null && isCancelled()) break;
+
                     string filePath = sourceFilePaths[i];
-                    if (!File.Exists(filePath)) continue;
+                    if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath)) continue;
 
                     string fileName = Path.GetFileName(filePath);
                     if (progressCallback != null)
@@ -415,7 +493,7 @@ namespace Pigsty.Services
                     {
                         targetFolder.CopyHere(filePath, ShellCopyFlags);
                         importedCount++;
-                        Thread.Sleep(80);
+                        Thread.Sleep(60);
                     }
                     catch (COMException ex)
                     {
@@ -426,27 +504,27 @@ namespace Pigsty.Services
                     }
                     catch
                     {
-                        // Import failure
                     }
                 }
 
                 return importedCount;
-            }));
+            });
         }
 
-        public Task<int> DeleteFilesAsync(List<AndroidFileItem> files, Action<int, int, string> progressCallback)
+        public Task<int> DeleteFilesAsync(List<AndroidFileItem> files, Action<int, int, string> progressCallback, Func<bool> isCancelled = null)
         {
-            return Task.Factory.StartNew(new Func<int>(() =>
+            return RunOnStaAsync(() =>
             {
                 if (files == null || files.Count == 0) return 0;
 
                 int deletedCount = 0;
                 for (int i = 0; i < files.Count; i++)
                 {
+                    if (isCancelled != null && isCancelled()) break;
+
                     var file = files[i];
                     if (file == null || file.ShellItem == null) continue;
 
-                    // STRICT SAFETY CHECK: Verify safe deletion target
                     if (!PathSanitizer.IsSafeDeletionTarget(file))
                     {
                         continue;
@@ -461,7 +539,7 @@ namespace Pigsty.Services
                     {
                         file.ShellItem.InvokeVerb("delete");
                         deletedCount++;
-                        Thread.Sleep(40);
+                        Thread.Sleep(35);
                     }
                     catch (COMException ex)
                     {
@@ -472,12 +550,11 @@ namespace Pigsty.Services
                     }
                     catch
                     {
-                        // Delete error
                     }
                 }
 
                 return deletedCount;
-            }));
+            });
         }
     }
 }

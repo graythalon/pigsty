@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -19,8 +18,7 @@ namespace Pigsty
 {
     public partial class MainWindow : Window
     {
-        private readonly ShellMtpDeviceService _mtpService;
-        private IMtpDeviceService _currentService;
+        private readonly IMtpDeviceService _mtpService;
 
         private List<AndroidDevice> _connectedDevices;
         private AndroidDevice _selectedDevice;
@@ -28,6 +26,7 @@ namespace Pigsty
         private List<AndroidFileItem> _currentCategoryFiles;
         private CategoryType _currentCategory;
         private bool _isInitialized;
+        private bool _isPopulatingCombo;
 
         public MainWindow()
         {
@@ -35,7 +34,6 @@ namespace Pigsty
             _isInitialized = true;
 
             _mtpService = new ShellMtpDeviceService();
-            _currentService = _mtpService;
 
             _allDiscoveredFiles = new List<AndroidFileItem>();
             _currentCategoryFiles = new List<AndroidFileItem>();
@@ -51,19 +49,19 @@ namespace Pigsty
 
         public async Task RefreshDevicesAsync()
         {
-            StatusBarStatusText.Text = "Scanning for connected Android devices...";
+            StatusBarStatusText.Text = "Scanning...";
             RefreshDevicesButton.IsEnabled = false;
 
             try
             {
-                var realDevices = await Task.Factory.StartNew(new Func<List<AndroidDevice>>(() => _mtpService.DetectDevices()));
+                var realDevices = await _mtpService.DetectDevicesAsync();
 
+                _isPopulatingCombo = true;
                 DeviceComboBox.Items.Clear();
 
                 if (realDevices != null && realDevices.Count > 0)
                 {
                     _connectedDevices = realDevices;
-                    _currentService = _mtpService;
 
                     foreach (var dev in realDevices)
                     {
@@ -71,24 +69,26 @@ namespace Pigsty
                         DeviceComboBox.Items.Add(cbi);
                     }
                     DeviceComboBox.SelectedIndex = 0;
+                    _selectedDevice = realDevices[0];
+                    _isPopulatingCombo = false;
+
                     UpdateConnectionUI(true);
+                    await ScanSelectedDeviceAsync();
                 }
                 else
                 {
+                    _isPopulatingCombo = false;
                     _selectedDevice = null;
                     _allDiscoveredFiles.Clear();
                     _currentCategoryFiles.Clear();
                     UpdateConnectionUI(false);
-                    StatusBarStatusText.Text = "No Android device detected. Connect via USB and choose 'File Transfer / MTP'.";
-                    RefreshDevicesButton.IsEnabled = true;
-                    return;
+                    StatusBarStatusText.Text = "No device";
                 }
-
-                await ScanSelectedDeviceAsync();
             }
             catch (Exception ex)
             {
-                StatusBarStatusText.Text = string.Format("Error scanning devices: {0}", ex.Message);
+                _isPopulatingCombo = false;
+                StatusBarStatusText.Text = ex.Message;
             }
             finally
             {
@@ -102,12 +102,10 @@ namespace Pigsty
             {
                 NoDeviceOverlay.Visibility = Visibility.Collapsed;
                 StorageOverviewPanel.Visibility = Visibility.Visible;
+                DeviceComboBox.Visibility = Visibility.Visible;
 
-                StatusLabel.Text = "Connected";
-                StatusLabel.Foreground = (Brush)FindResource("SuccessBrush");
                 StatusDot.Fill = (Brush)FindResource("SuccessBrush");
-                ConnectionBadge.Background = new SolidColorBrush(Color.FromArgb(40, 16, 185, 129));
-                ConnectionBadge.BorderBrush = (Brush)FindResource("SuccessBrush");
+                StatusDot.ToolTip = "Connected";
             }
             else
             {
@@ -115,40 +113,57 @@ namespace Pigsty
                 StorageOverviewPanel.Visibility = Visibility.Collapsed;
                 DashboardView.Visibility = Visibility.Collapsed;
                 CategoryFileListView.Visibility = Visibility.Collapsed;
+                DeviceComboBox.Visibility = Visibility.Collapsed;
 
-                StatusLabel.Text = "No Device";
-                StatusLabel.Foreground = (Brush)FindResource("TextMutedBrush");
                 StatusDot.Fill = (Brush)FindResource("TextMutedBrush");
-                ConnectionBadge.Background = (Brush)FindResource("PanelAltBrush");
-                ConnectionBadge.BorderBrush = (Brush)FindResource("BorderDarkBrush");
+                StatusDot.ToolTip = "Disconnected";
+
+                ResetSidebarBadges();
             }
+        }
+
+        private void ResetSidebarBadges()
+        {
+            PhotosBadge.Text = "0";
+            VideosBadge.Text = "0";
+            AudioBadge.Text = "0";
+            DocsBadge.Text = "0";
+            ApksBadge.Text = "0";
+            DownloadsBadge.Text = "0";
+            ArchivesBadge.Text = "0";
+            LargeFilesBadge.Text = "0";
+            AllFilesBadge.Text = "0";
+            StatusBarSelectionText.Text = "";
         }
 
         private async Task ScanSelectedDeviceAsync()
         {
             if (_selectedDevice == null) return;
 
-            StatusBarStatusText.Text = string.Format("Reading storage structure on {0}...", _selectedDevice.Name);
+            StatusBarStatusText.Text = "Indexing...";
 
             try
             {
-                var files = await _currentService.ScanFilesAsync(_selectedDevice, (status, pct) =>
+                var files = await _mtpService.ScanFilesAsync(_selectedDevice, (status, pct) =>
                 {
-                    Dispatcher.Invoke(new Action(() =>
+                    if (!Dispatcher.HasShutdownStarted)
                     {
-                        StatusBarStatusText.Text = status;
-                    }));
+                        Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            StatusBarStatusText.Text = status;
+                        }));
+                    }
                 });
 
                 _allDiscoveredFiles = files ?? new List<AndroidFileItem>();
                 UpdateStorageOverview();
                 ApplyCategoryFilter();
-                StatusBarStatusText.Text = string.Format("Ready • {0} items indexed ({1})",
+                StatusBarStatusText.Text = string.Format("{0} items • {1}",
                     _allDiscoveredFiles.Count, SizeFormatter.FormatBytes(_allDiscoveredFiles.Sum(f => f.SizeBytes)));
             }
             catch (Exception ex)
             {
-                StatusBarStatusText.Text = string.Format("Scan error: {0}", ex.Message);
+                StatusBarStatusText.Text = ex.Message;
             }
         }
 
@@ -157,11 +172,10 @@ namespace Pigsty
             if (!_isInitialized || _selectedDevice == null || DeviceTitleText == null || StorageBarGrid == null) return;
 
             DeviceTitleText.Text = _selectedDevice.Name;
-            StorageVolumeText.Text = string.IsNullOrEmpty(_selectedDevice.StorageName) ? "Internal shared storage" : _selectedDevice.StorageName;
+            StorageVolumeText.Text = string.IsNullOrEmpty(_selectedDevice.StorageName) ? "" : _selectedDevice.StorageName;
 
             var stats = StorageStats.Calculate(_allDiscoveredFiles);
 
-            // Update Badges in Sidebar
             PhotosBadge.Text = stats.PhotosCount.ToString();
             VideosBadge.Text = stats.VideosCount.ToString();
             AudioBadge.Text = stats.AudioCount.ToString();
@@ -172,7 +186,6 @@ namespace Pigsty
             LargeFilesBadge.Text = stats.LargeFilesCount.ToString();
             AllFilesBadge.Text = stats.TotalFileCount.ToString();
 
-            // Update Legend texts
             LegendPhotosText.Text = SizeFormatter.FormatBytes(stats.PhotosSizeBytes);
             LegendVideosText.Text = SizeFormatter.FormatBytes(stats.VideosSizeBytes);
             LegendAudioText.Text = SizeFormatter.FormatBytes(stats.AudioSizeBytes);
@@ -181,58 +194,94 @@ namespace Pigsty
             LegendDownloadsText.Text = SizeFormatter.FormatBytes(stats.DownloadsSizeBytes);
             LegendArchivesText.Text = SizeFormatter.FormatBytes(stats.ArchivesSizeBytes);
 
-            // Storage capacity summary
             long totalCap = _selectedDevice.TotalSpaceBytes;
-            if (totalCap <= 0) totalCap = 64L * 1024L * 1024L * 1024L;
-
-            long freeSpace = _selectedDevice.FreeSpaceBytes;
-            if (freeSpace < 0) freeSpace = 0;
-
+            long freeSpace = Math.Max(0, _selectedDevice.FreeSpaceBytes);
             long usedSpace = _selectedDevice.UsedSpaceBytes;
-            if (usedSpace <= 0 && stats.TotalSizeBytes > 0)
+
+            if (totalCap <= 0)
             {
                 usedSpace = stats.TotalSizeBytes;
-                freeSpace = Math.Max(0, totalCap - usedSpace);
+                totalCap = Math.Max(usedSpace, 1);
+                freeSpace = 0;
+                StorageCapacityText.Text = SizeFormatter.FormatBytes(usedSpace);
+                LegendFreeText.Text = "";
+            }
+            else
+            {
+                if (usedSpace <= 0 && stats.TotalSizeBytes > 0)
+                {
+                    usedSpace = stats.TotalSizeBytes;
+                    freeSpace = Math.Max(0, totalCap - usedSpace);
+                }
+
+                StorageCapacityText.Text = string.Format("{0} / {1}",
+                    SizeFormatter.FormatBytes(usedSpace),
+                    SizeFormatter.FormatBytes(totalCap));
+                LegendFreeText.Text = string.Format("({0} free)", SizeFormatter.FormatBytes(freeSpace));
             }
 
-            StorageCapacityText.Text = string.Format("{0} used of {1} ({2} free)",
-                SizeFormatter.FormatBytes(usedSpace),
-                SizeFormatter.FormatBytes(totalCap),
-                SizeFormatter.FormatBytes(freeSpace));
-            LegendFreeText.Text = SizeFormatter.FormatBytes(freeSpace);
-
-            // Calculate Proportions for Storage Bar
             double totalDouble = totalCap > 0 ? (double)totalCap : 1.0;
-            ColPhotos.Width = new GridLength(Math.Max(0.5, (stats.PhotosSizeBytes / totalDouble) * 100.0), GridUnitType.Star);
-            ColVideos.Width = new GridLength(Math.Max(0.5, (stats.VideosSizeBytes / totalDouble) * 100.0), GridUnitType.Star);
-            ColAudio.Width = new GridLength(Math.Max(0.5, (stats.AudioSizeBytes / totalDouble) * 100.0), GridUnitType.Star);
-            ColDocs.Width = new GridLength(Math.Max(0.5, (stats.DocumentsSizeBytes / totalDouble) * 100.0), GridUnitType.Star);
-            ColApks.Width = new GridLength(Math.Max(0.5, (stats.ApksSizeBytes / totalDouble) * 100.0), GridUnitType.Star);
-            ColDownloads.Width = new GridLength(Math.Max(0.5, (stats.DownloadsSizeBytes / totalDouble) * 100.0), GridUnitType.Star);
-            ColArchives.Width = new GridLength(Math.Max(0.5, (stats.ArchivesSizeBytes / totalDouble) * 100.0), GridUnitType.Star);
-            ColOther.Width = new GridLength(Math.Max(0.5, (stats.OtherSizeBytes / totalDouble) * 100.0), GridUnitType.Star);
-            ColFree.Width = new GridLength(Math.Max(1.0, (freeSpace / totalDouble) * 100.0), GridUnitType.Star);
+            ColPhotos.Width = new GridLength(Math.Max(0.2, (stats.PhotosSizeBytes / totalDouble) * 100.0), GridUnitType.Star);
+            ColVideos.Width = new GridLength(Math.Max(0.2, (stats.VideosSizeBytes / totalDouble) * 100.0), GridUnitType.Star);
+            ColAudio.Width = new GridLength(Math.Max(0.2, (stats.AudioSizeBytes / totalDouble) * 100.0), GridUnitType.Star);
+            ColDocs.Width = new GridLength(Math.Max(0.2, (stats.DocumentsSizeBytes / totalDouble) * 100.0), GridUnitType.Star);
+            ColApks.Width = new GridLength(Math.Max(0.2, (stats.ApksSizeBytes / totalDouble) * 100.0), GridUnitType.Star);
+            ColDownloads.Width = new GridLength(Math.Max(0.2, (stats.DownloadsSizeBytes / totalDouble) * 100.0), GridUnitType.Star);
+            ColArchives.Width = new GridLength(Math.Max(0.2, (stats.ArchivesSizeBytes / totalDouble) * 100.0), GridUnitType.Star);
+            ColOther.Width = new GridLength(Math.Max(0.2, (stats.OtherSizeBytes / totalDouble) * 100.0), GridUnitType.Star);
+            ColFree.Width = new GridLength(Math.Max(0.5, (freeSpace / totalDouble) * 100.0), GridUnitType.Star);
 
-            // Dashboard cards
             DashMediaSize.Text = SizeFormatter.FormatBytes(stats.PhotosSizeBytes + stats.VideosSizeBytes);
-            DashMediaCount.Text = string.Format("{0} photos & videos", stats.PhotosCount + stats.VideosCount);
+            DashMediaCount.Text = (stats.PhotosCount + stats.VideosCount).ToString();
 
             DashApksSize.Text = SizeFormatter.FormatBytes(stats.ApksSizeBytes);
-            DashApksCount.Text = string.Format("{0} package files", stats.ApksCount);
+            DashApksCount.Text = stats.ApksCount.ToString();
 
             DashLargeSize.Text = SizeFormatter.FormatBytes(stats.LargeFilesSizeBytes);
-            DashLargeCount.Text = string.Format("{0} files > 50MB", stats.LargeFilesCount);
+            DashLargeCount.Text = stats.LargeFilesCount.ToString();
 
             DashDownloadsSize.Text = SizeFormatter.FormatBytes(stats.DownloadsSizeBytes);
-            DashDownloadsCount.Text = string.Format("{0} files in Download", stats.DownloadsCount);
+            DashDownloadsCount.Text = stats.DownloadsCount.ToString();
 
-            // Top 10 largest files for dashboard
             var top10 = _allDiscoveredFiles
                 .Where(f => !f.IsFolder)
                 .OrderByDescending(f => f.SizeBytes)
                 .Take(10)
                 .ToList();
             TopFilesGrid.ItemsSource = top10;
+        }
+
+        private void SelectCategoryByTag(string tagName)
+        {
+            foreach (var item in CategoryListBox.Items)
+            {
+                var lbi = item as ListBoxItem;
+                if (lbi != null && lbi.Tag != null && lbi.Tag.ToString() == tagName)
+                {
+                    CategoryListBox.SelectedItem = lbi;
+                    break;
+                }
+            }
+        }
+
+        private void CardMedia_Click(object sender, RoutedEventArgs e)
+        {
+            SelectCategoryByTag("Photos");
+        }
+
+        private void CardApks_Click(object sender, RoutedEventArgs e)
+        {
+            SelectCategoryByTag("Apks");
+        }
+
+        private void CardLarge_Click(object sender, RoutedEventArgs e)
+        {
+            SelectCategoryByTag("LargeFiles");
+        }
+
+        private void CardDownloads_Click(object sender, RoutedEventArgs e)
+        {
+            SelectCategoryByTag("Downloads");
         }
 
         private void CategoryListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -259,10 +308,13 @@ namespace Pigsty
         private void ApplyCategoryFilter()
         {
             if (!_isInitialized || DashboardView == null || CategoryFileListView == null) return;
+            if (_selectedDevice == null) return;
+
             if (_currentCategory == CategoryType.Overview)
             {
                 DashboardView.Visibility = Visibility.Visible;
                 CategoryFileListView.Visibility = Visibility.Collapsed;
+                StatusBarSelectionText.Text = "";
                 return;
             }
 
@@ -276,27 +328,27 @@ namespace Pigsty
                 case CategoryType.Photos:
                     filtered = filtered.Where(f => f.Category == CategoryType.Photos);
                     CategoryViewIcon.Text = "📸";
-                    CategoryViewTitle.Text = "Photos & Images";
+                    CategoryViewTitle.Text = "Photos";
                     break;
                 case CategoryType.Videos:
                     filtered = filtered.Where(f => f.Category == CategoryType.Videos);
                     CategoryViewIcon.Text = "🎬";
-                    CategoryViewTitle.Text = "Videos & Movies";
+                    CategoryViewTitle.Text = "Videos";
                     break;
                 case CategoryType.Audio:
                     filtered = filtered.Where(f => f.Category == CategoryType.Audio);
                     CategoryViewIcon.Text = "🎵";
-                    CategoryViewTitle.Text = "Music & Audio";
+                    CategoryViewTitle.Text = "Audio";
                     break;
                 case CategoryType.Documents:
                     filtered = filtered.Where(f => f.Category == CategoryType.Documents);
                     CategoryViewIcon.Text = "📄";
-                    CategoryViewTitle.Text = "Documents & PDFs";
+                    CategoryViewTitle.Text = "Docs";
                     break;
                 case CategoryType.Apks:
                     filtered = filtered.Where(f => f.Category == CategoryType.Apks);
                     CategoryViewIcon.Text = "📦";
-                    CategoryViewTitle.Text = "APKs & Installers";
+                    CategoryViewTitle.Text = "APKs";
                     break;
                 case CategoryType.Downloads:
                     filtered = filtered.Where(f => f.Category == CategoryType.Downloads ||
@@ -307,22 +359,21 @@ namespace Pigsty
                 case CategoryType.Archives:
                     filtered = filtered.Where(f => f.Category == CategoryType.Archives);
                     CategoryViewIcon.Text = "🗃️";
-                    CategoryViewTitle.Text = "Archives (.zip/.rar)";
+                    CategoryViewTitle.Text = "Archives";
                     break;
                 case CategoryType.LargeFiles:
                     filtered = filtered.Where(f => f.IsLargeFile);
                     CategoryViewIcon.Text = "⚠️";
-                    CategoryViewTitle.Text = "Large Files (> 50MB)";
+                    CategoryViewTitle.Text = "Large";
                     break;
                 case CategoryType.AllFiles:
                 default:
                     CategoryViewIcon.Text = "📁";
-                    CategoryViewTitle.Text = "All Files";
+                    CategoryViewTitle.Text = "All";
                     break;
             }
 
-            // Search filtering
-            if (!string.IsNullOrWhiteSpace(SearchBox.Text))
+            if (SearchBox != null && !string.IsNullOrWhiteSpace(SearchBox.Text))
             {
                 string query = SearchBox.Text.Trim();
                 filtered = filtered.Where(f =>
@@ -330,23 +381,22 @@ namespace Pigsty
                     (f.DirectoryPath != null && f.DirectoryPath.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0));
             }
 
-            // Sorting
             int sortIndex = SortComboBox != null ? SortComboBox.SelectedIndex : 0;
             switch (sortIndex)
             {
-                case 1: // Size largest first
+                case 1:
                     filtered = filtered.OrderByDescending(f => f.SizeBytes);
                     break;
-                case 2: // Size smallest first
+                case 2:
                     filtered = filtered.OrderBy(f => f.SizeBytes);
                     break;
-                case 3: // Date newest first
+                case 3:
                     filtered = filtered.OrderByDescending(f => f.DateModified ?? DateTime.MinValue);
                     break;
-                case 4: // Date oldest first
+                case 4:
                     filtered = filtered.OrderBy(f => f.DateModified ?? DateTime.MinValue);
                     break;
-                default: // Name
+                default:
                     filtered = filtered.OrderBy(f => f.Name);
                     break;
             }
@@ -355,26 +405,22 @@ namespace Pigsty
             FilesDataGrid.ItemsSource = _currentCategoryFiles;
 
             long totalBytes = _currentCategoryFiles.Sum(f => f.SizeBytes);
-            CategoryViewCountSize.Text = string.Format("{0} items • {1}", _currentCategoryFiles.Count, SizeFormatter.FormatBytes(totalBytes));
+            CategoryViewCountSize.Text = string.Format("{0} • {1}", _currentCategoryFiles.Count, SizeFormatter.FormatBytes(totalBytes));
 
-            UpdateSelectionBanner();
+            UpdateSelectionStatus();
         }
 
-        private void UpdateSelectionBanner()
+        private void UpdateSelectionStatus()
         {
             var selected = _currentCategoryFiles.Where(f => f.IsSelected).ToList();
             if (selected.Count > 0)
             {
                 long selectedBytes = selected.Sum(f => f.SizeBytes);
-                SelectionBanner.Visibility = Visibility.Visible;
-                SelectionBannerText.Text = string.Format("✓ {0} file{1} selected ({2})",
-                    selected.Count, selected.Count == 1 ? "" : "s", SizeFormatter.FormatBytes(selectedBytes));
                 StatusBarSelectionText.Text = string.Format("{0} selected ({1})", selected.Count, SizeFormatter.FormatBytes(selectedBytes));
             }
             else
             {
-                SelectionBanner.Visibility = Visibility.Collapsed;
-                StatusBarSelectionText.Text = "0 items selected";
+                StatusBarSelectionText.Text = "";
             }
         }
 
@@ -392,7 +438,7 @@ namespace Pigsty
 
         private void FileCheckBox_Click(object sender, RoutedEventArgs e)
         {
-            UpdateSelectionBanner();
+            UpdateSelectionStatus();
         }
 
         private void HeaderCheckBox_Click(object sender, RoutedEventArgs e)
@@ -404,7 +450,7 @@ namespace Pigsty
             {
                 item.IsSelected = check;
             }
-            UpdateSelectionBanner();
+            UpdateSelectionStatus();
         }
 
         private void SelectAllButton_Click(object sender, RoutedEventArgs e)
@@ -413,7 +459,7 @@ namespace Pigsty
             {
                 item.IsSelected = true;
             }
-            UpdateSelectionBanner();
+            UpdateSelectionStatus();
         }
 
         private void ClearSelectionButton_Click(object sender, RoutedEventArgs e)
@@ -422,20 +468,25 @@ namespace Pigsty
             {
                 item.IsSelected = false;
             }
-            UpdateSelectionBanner();
+            UpdateSelectionStatus();
         }
 
         private async void ExportButton_Click(object sender, RoutedEventArgs e)
         {
             var selectedFiles = _currentCategoryFiles.Where(f => f.IsSelected).ToList();
+            if (selectedFiles.Count == 0 && FilesDataGrid.SelectedItems.Count > 0)
+            {
+                selectedFiles = FilesDataGrid.SelectedItems.OfType<AndroidFileItem>().ToList();
+            }
+
             if (selectedFiles.Count == 0)
             {
                 if (_currentCategoryFiles.Count > 0)
                 {
-                    var dlg = new ConfirmDialog("Export Category",
-                        string.Format("No individual files selected. Do you want to export all {0} file(s) in this category ({1})?",
+                    var dlg = new ConfirmDialog("Export All",
+                        string.Format("Export all {0} files ({1})?",
                             _currentCategoryFiles.Count, SizeFormatter.FormatBytes(_currentCategoryFiles.Sum(f => f.SizeBytes))),
-                        "Export All", false);
+                        "Export", false);
                     dlg.Owner = this;
                     if (dlg.ShowDialog() == true && dlg.Confirmed)
                     {
@@ -448,15 +499,20 @@ namespace Pigsty
                 }
                 else
                 {
-                    MessageBox.Show(this, "No files available to export.", "Pigsty", MessageBoxButton.OK, MessageBoxImage.Information);
                     return;
                 }
             }
 
-            // Prompt user for destination folder on PC
+            await ExportFileListAsync(selectedFiles);
+        }
+
+        private async Task ExportFileListAsync(List<AndroidFileItem> filesToExport)
+        {
+            if (filesToExport == null || filesToExport.Count == 0) return;
+
             var folderDlg = new System.Windows.Forms.FolderBrowserDialog
             {
-                Description = "Select destination folder on PC to export selected Android files",
+                Description = "Select destination folder",
                 ShowNewFolderButton = true
             };
 
@@ -466,43 +522,31 @@ namespace Pigsty
             }
 
             string destFolder = folderDlg.SelectedPath;
-            var progressDlg = new ProgressDialog("Exporting files to PC...");
+            var progressDlg = new ProgressDialog("Exporting...");
             progressDlg.Owner = this;
 
-            var exportTask = _currentService.ExportFilesAsync(selectedFiles, destFolder, (curr, tot, item) =>
-            {
-                progressDlg.UpdateProgress(curr, tot, item);
-            });
+            var exportTask = _mtpService.ExportFilesAsync(
+                filesToExport,
+                destFolder,
+                (curr, tot, item) => progressDlg.UpdateProgress(curr, tot, item),
+                () => progressDlg.IsCancelled);
 
             progressDlg.Show();
             int count = await exportTask;
             progressDlg.Close();
 
-            StatusBarStatusText.Text = string.Format("Exported {0} file(s) to {1}", count, destFolder);
-
-            var result = MessageBox.Show(this,
-                string.Format("Successfully exported {0} file(s) to:\n{1}\n\nDo you want to open the destination folder in Windows Explorer?", count, destFolder),
-                "Export Complete", MessageBoxButton.YesNo, MessageBoxImage.Information);
-
-            if (result == MessageBoxResult.Yes)
-            {
-                Process.Start("explorer.exe", destFolder);
-            }
+            StatusBarStatusText.Text = string.Format("Exported {0} to {1}", count, destFolder);
         }
 
         private async void ImportButton_Click(object sender, RoutedEventArgs e)
         {
-            if (_selectedDevice == null)
-            {
-                MessageBox.Show(this, "No Android device is currently selected.", "Pigsty", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
+            if (_selectedDevice == null) return;
 
             var openDlg = new OpenFileDialog
             {
-                Title = "Select files from PC to import to Android device",
+                Title = "Select files to import",
                 Multiselect = true,
-                Filter = "All Files (*.*)|*.*|Photos & Images|*.jpg;*.png;*.webp;*.heic|Videos|*.mp4;*.mkv;*.mov|Music & Audio|*.mp3;*.m4a;*.wav;*.flac|Documents|*.pdf;*.docx;*.xlsx;*.txt|APKs|*.apk;*.xapk"
+                Filter = "All Files (*.*)|*.*|Photos|*.jpg;*.jpeg;*.png;*.webp;*.heic|Videos|*.mp4;*.mkv;*.mov|Audio|*.mp3;*.m4a;*.wav;*.flac|Docs|*.pdf;*.docx;*.xlsx;*.txt|APKs|*.apk;*.xapk"
             };
 
             if (openDlg.ShowDialog(this) != true || openDlg.FileNames.Length == 0)
@@ -510,10 +554,23 @@ namespace Pigsty
                 return;
             }
 
-            var selectedFilePaths = openDlg.FileNames.ToList();
+            await ImportFileListAsync(openDlg.FileNames.ToList());
+        }
 
-            // Ask for target folder on phone
-            var importDlg = new ImportDialog(selectedFilePaths.Count);
+        private async Task ImportFileListAsync(List<string> filePaths)
+        {
+            if (_selectedDevice == null || filePaths == null || filePaths.Count == 0) return;
+
+            string defaultTarget = "Download";
+            switch (_currentCategory)
+            {
+                case CategoryType.Photos: defaultTarget = "DCIM"; break;
+                case CategoryType.Videos: defaultTarget = "Movies"; break;
+                case CategoryType.Audio: defaultTarget = "Music"; break;
+                case CategoryType.Documents: defaultTarget = "Documents"; break;
+            }
+
+            var importDlg = new ImportDialog(filePaths.Count, defaultTarget);
             importDlg.Owner = this;
             if (importDlg.ShowDialog() != true || !importDlg.IsConfirmed)
             {
@@ -522,162 +579,127 @@ namespace Pigsty
 
             string targetFolder = importDlg.SelectedTargetFolder;
 
-            var progressDlg = new ProgressDialog("Importing files to Android...");
+            var progressDlg = new ProgressDialog("Importing...");
             progressDlg.Owner = this;
 
-            var importTask = _currentService.ImportFilesAsync(_selectedDevice, selectedFilePaths, targetFolder, (curr, tot, item) =>
-            {
-                progressDlg.UpdateProgress(curr, tot, item);
-            });
+            var importTask = _mtpService.ImportFilesAsync(
+                _selectedDevice,
+                filePaths,
+                targetFolder,
+                (curr, tot, item) => progressDlg.UpdateProgress(curr, tot, item),
+                () => progressDlg.IsCancelled);
 
             progressDlg.Show();
             int importedCount = await importTask;
             progressDlg.Close();
 
-            StatusBarStatusText.Text = string.Format("Imported {0} file(s) to Android ({1})", importedCount, targetFolder);
-
-            MessageBox.Show(this,
-                string.Format("Successfully imported {0} file(s) to '{1}' on your Android device.", importedCount, targetFolder),
-                "Import Complete", MessageBoxButton.OK, MessageBoxImage.Information);
-
             await ScanSelectedDeviceAsync();
+            StatusBarStatusText.Text = string.Format("Imported {0} to {1}", importedCount, targetFolder);
         }
 
         private async void DeleteButton_Click(object sender, RoutedEventArgs e)
         {
             var selectedFiles = _currentCategoryFiles.Where(f => f.IsSelected).ToList();
-            if (selectedFiles.Count == 0)
+            if (selectedFiles.Count == 0 && FilesDataGrid.SelectedItems.Count > 0)
             {
-                MessageBox.Show(this, "Please select at least one file to delete.", "Pigsty", MessageBoxButton.OK, MessageBoxImage.Information);
+                selectedFiles = FilesDataGrid.SelectedItems.OfType<AndroidFileItem>().ToList();
+            }
+
+            if (selectedFiles.Count == 0) return;
+
+            await DeleteFileListAsync(selectedFiles);
+        }
+
+        private async Task DeleteFileListAsync(List<AndroidFileItem> filesToDelete)
+        {
+            var safeFiles = filesToDelete.Where(f => PathSanitizer.IsSafeDeletionTarget(f)).ToList();
+            if (safeFiles.Count == 0)
+            {
+                StatusBarStatusText.Text = "Protected item cannot be deleted";
                 return;
             }
 
-            // SAFETY CHECK: Filter out protected system and directory items
-            var safeFilesToDelete = selectedFiles.Where(f => PathSanitizer.IsSafeDeletionTarget(f)).ToList();
-            if (safeFilesToDelete.Count == 0)
-            {
-                MessageBox.Show(this, "The selected item(s) cannot be deleted because they are protected system folders or directories. Only files can be deleted.", "Protected Target", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
+            long totalBytes = safeFiles.Sum(f => f.SizeBytes);
+            string msg = string.Format("Delete {0} file{1} ({2})?",
+                safeFiles.Count, safeFiles.Count == 1 ? "" : "s", SizeFormatter.FormatBytes(totalBytes));
 
-            long totalBytes = safeFilesToDelete.Sum(f => f.SizeBytes);
-            string msg = string.Format("Permanently delete {0} file(s) ({1}) from your Android device?\n\nThis will free up internal storage on your phone. This action cannot be undone.",
-                safeFilesToDelete.Count, SizeFormatter.FormatBytes(totalBytes));
-
-            if (safeFilesToDelete.Count < selectedFiles.Count)
-            {
-                msg = string.Format("Notice: {0} protected folder(s) were excluded from deletion.\n\n" + msg,
-                    selectedFiles.Count - safeFilesToDelete.Count);
-            }
-
-            var confirmDlg = new ConfirmDialog("Confirm Permanent Deletion", msg, "Delete Permanently", true);
+            var confirmDlg = new ConfirmDialog("Delete", msg, "Delete", true);
             confirmDlg.Owner = this;
             if (confirmDlg.ShowDialog() != true || !confirmDlg.Confirmed)
             {
                 return;
             }
 
-            var progressDlg = new ProgressDialog("Deleting files from Android...");
+            var progressDlg = new ProgressDialog("Deleting...");
             progressDlg.Owner = this;
 
-            var deleteTask = _currentService.DeleteFilesAsync(safeFilesToDelete, (curr, tot, item) =>
-            {
-                progressDlg.UpdateProgress(curr, tot, item);
-            });
+            var deleteTask = _mtpService.DeleteFilesAsync(
+                safeFiles,
+                (curr, tot, item) => progressDlg.UpdateProgress(curr, tot, item),
+                () => progressDlg.IsCancelled);
 
             progressDlg.Show();
             int deletedCount = await deleteTask;
             progressDlg.Close();
 
-            StatusBarStatusText.Text = string.Format("Deleted {0} file(s), freed {1}", deletedCount, SizeFormatter.FormatBytes(totalBytes));
-
             await ScanSelectedDeviceAsync();
-
-            MessageBox.Show(this,
-                string.Format("Successfully deleted {0} file(s) from device, freeing {1}.", deletedCount, SizeFormatter.FormatBytes(totalBytes)),
-                "Deletion Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+            StatusBarStatusText.Text = string.Format("Deleted {0} ({1} freed)", deletedCount, SizeFormatter.FormatBytes(totalBytes));
         }
 
         private void CategoryFileListView_DragEnter(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(DataFormats.FileDrop))
-            {
-                e.Effects = DragDropEffects.Copy;
-            }
-            else
-            {
-                e.Effects = DragDropEffects.None;
-            }
+            e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None;
             e.Handled = true;
         }
 
         private async void CategoryFileListView_Drop(object sender, DragEventArgs e)
         {
-            if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+            if (!e.Data.GetDataPresent(DataFormats.FileDrop) || _selectedDevice == null) return;
 
             string[] files = e.Data.GetData(DataFormats.FileDrop) as string[];
             if (files == null || files.Length == 0) return;
 
-            if (_selectedDevice == null)
-            {
-                MessageBox.Show(this, "No Android device is currently selected.", "Pigsty", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
             var validFiles = files.Where(f => File.Exists(f)).ToList();
             if (validFiles.Count == 0) return;
 
-            string targetFolder = "Download";
-            switch (_currentCategory)
-            {
-                case CategoryType.Photos: targetFolder = "DCIM"; break;
-                case CategoryType.Videos: targetFolder = "Movies"; break;
-                case CategoryType.Audio: targetFolder = "Music"; break;
-                case CategoryType.Documents: targetFolder = "Documents"; break;
-                default: targetFolder = "Download"; break;
-            }
-
-            var importDlg = new ImportDialog(validFiles.Count);
-            importDlg.Owner = this;
-            if (importDlg.ShowDialog() != true || !importDlg.IsConfirmed)
-            {
-                return;
-            }
-
-            targetFolder = importDlg.SelectedTargetFolder;
-
-            var progressDlg = new ProgressDialog("Importing dropped files to Android...");
-            progressDlg.Owner = this;
-
-            var importTask = _currentService.ImportFilesAsync(_selectedDevice, validFiles, targetFolder, (curr, tot, item) =>
-            {
-                progressDlg.UpdateProgress(curr, tot, item);
-            });
-
-            progressDlg.Show();
-            int importedCount = await importTask;
-            progressDlg.Close();
-
-            StatusBarStatusText.Text = string.Format("Imported {0} file(s) to Android ({1})", importedCount, targetFolder);
-
-            MessageBox.Show(this,
-                string.Format("Successfully imported {0} file(s) to '{1}' on your Android device.", importedCount, targetFolder),
-                "Import Complete", MessageBoxButton.OK, MessageBoxImage.Information);
-
-            await ScanSelectedDeviceAsync();
+            await ImportFileListAsync(validFiles);
         }
 
-        private void ViewAllLargeFilesButton_Click(object sender, RoutedEventArgs e)
+        private async void TopFileExport_Click(object sender, RoutedEventArgs e)
         {
-            // Switch category list to LargeFiles
-            foreach (var item in CategoryListBox.Items)
+            var selected = TopFilesGrid.SelectedItems.OfType<AndroidFileItem>().ToList();
+            if (selected.Count > 0)
             {
-                var lbi = item as ListBoxItem;
-                if (lbi != null && lbi.Tag != null && lbi.Tag.ToString() == "LargeFiles")
-                {
-                    CategoryListBox.SelectedItem = lbi;
-                    break;
-                }
+                await ExportFileListAsync(selected);
+            }
+        }
+
+        private async void TopFileDelete_Click(object sender, RoutedEventArgs e)
+        {
+            var selected = TopFilesGrid.SelectedItems.OfType<AndroidFileItem>().ToList();
+            if (selected.Count > 0)
+            {
+                await DeleteFileListAsync(selected);
+            }
+        }
+
+        private void TopFileCopyName_Click(object sender, RoutedEventArgs e)
+        {
+            var item = TopFilesGrid.SelectedItem as AndroidFileItem;
+            if (item != null && !string.IsNullOrEmpty(item.Name))
+            {
+                Clipboard.SetText(item.Name);
+                StatusBarStatusText.Text = "Copied";
+            }
+        }
+
+        private void TopFileCopyPath_Click(object sender, RoutedEventArgs e)
+        {
+            var item = TopFilesGrid.SelectedItem as AndroidFileItem;
+            if (item != null)
+            {
+                Clipboard.SetText(string.Format("{0}\\{1}", item.DirectoryPath, item.Name));
+                StatusBarStatusText.Text = "Copied";
             }
         }
 
@@ -686,17 +708,17 @@ namespace Pigsty
             await RefreshDevicesAsync();
         }
 
-        private void DeviceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private async void DeviceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (!_isInitialized) return;
+            if (!_isInitialized || _isPopulatingCombo) return;
             var selectedItem = DeviceComboBox.SelectedItem as ComboBoxItem;
             if (selectedItem != null && selectedItem.Tag != null)
             {
-                _selectedDevice = selectedItem.Tag as AndroidDevice;
-                if (_selectedDevice != null)
+                var dev = selectedItem.Tag as AndroidDevice;
+                if (dev != null && dev != _selectedDevice)
                 {
-                    UpdateStorageOverview();
-                    ApplyCategoryFilter();
+                    _selectedDevice = dev;
+                    await ScanSelectedDeviceAsync();
                 }
             }
         }
@@ -707,7 +729,7 @@ namespace Pigsty
             if (item != null && !string.IsNullOrEmpty(item.Name))
             {
                 Clipboard.SetText(item.Name);
-                StatusBarStatusText.Text = string.Format("Copied to clipboard: {0}", item.Name);
+                StatusBarStatusText.Text = "Copied";
             }
         }
 
@@ -716,22 +738,18 @@ namespace Pigsty
             var item = FilesDataGrid.SelectedItem as AndroidFileItem;
             if (item != null)
             {
-                string full = string.Format("{0}\\{1}", item.DirectoryPath, item.Name);
-                Clipboard.SetText(full);
-                StatusBarStatusText.Text = string.Format("Copied path to clipboard: {0}", full);
+                Clipboard.SetText(string.Format("{0}\\{1}", item.DirectoryPath, item.Name));
+                StatusBarStatusText.Text = "Copied";
             }
         }
 
         private void AboutButton_Click(object sender, RoutedEventArgs e)
         {
-            string info = "Pigsty - Android Storage Manager for Windows\n\n" +
-                          "Manage files on your Android device over USB without Developer Options.\n\n" +
-                          "• Native Windows MTP integration\n" +
-                          "• Categorized storage view & fast file operations\n" +
-                          "• Safe file export, import, and deletion\n\n" +
-                          "Repository: https://github.com/graythalon/pigsty.git";
+            string info = "Pigsty v1.0.3\n" +
+                          "Android MTP Storage Manager\n\n" +
+                          "https://github.com/graythalon/pigsty.git";
 
-            MessageBox.Show(this, info, "About Pigsty", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this, info, "Pigsty", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 }

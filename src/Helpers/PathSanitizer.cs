@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using System.Text.RegularExpressions;
+using System.Text;
 using Pigsty.Models;
 
 namespace Pigsty.Helpers
@@ -15,6 +15,20 @@ namespace Pigsty.Helpers
             "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
         };
 
+        private static readonly string[] ProtectedSystemPaths = new string[]
+        {
+            @"\Android\data",
+            @"\Android\obb",
+            @"\system",
+            @"\vendor",
+            @"\proc",
+            @"\dev",
+            @"\efs",
+            @"\boot",
+            @"\recovery",
+            @"\firmware"
+        };
+
         public static string SanitizeFileName(string fileName)
         {
             if (string.IsNullOrWhiteSpace(fileName))
@@ -22,23 +36,26 @@ namespace Pigsty.Helpers
                 return "unnamed_file";
             }
 
-            // Replace invalid characters with underscore
-            string clean = fileName;
-            foreach (char c in InvalidFileNameChars)
+            var sb = new StringBuilder(fileName.Length);
+            foreach (char c in fileName)
             {
-                clean = clean.Replace(c, '_');
+                if (c < 32 || Array.IndexOf(InvalidFileNameChars, c) >= 0)
+                {
+                    sb.Append('_');
+                }
+                else
+                {
+                    sb.Append(c);
+                }
             }
 
-            // Strip path traversal attempts
-            clean = clean.Replace("..", "_");
-            clean = clean.Trim('.', ' ');
+            string clean = sb.ToString().Replace("..", "_").Trim('.', ' ');
 
             if (string.IsNullOrEmpty(clean))
             {
-                clean = "file_" + DateTime.Now.Ticks;
+                clean = "file_" + DateTime.UtcNow.Ticks;
             }
 
-            // Check reserved Windows names
             string baseName = Path.GetFileNameWithoutExtension(clean).ToUpperInvariant();
             foreach (string reserved in ReservedDeviceNames)
             {
@@ -49,62 +66,59 @@ namespace Pigsty.Helpers
                 }
             }
 
+            if (clean.Length > 200)
+            {
+                string ext = Path.GetExtension(clean);
+                if (ext.Length > 20) ext = ext.Substring(0, 20);
+                clean = clean.Substring(0, 200 - ext.Length) + ext;
+            }
+
             return clean;
         }
 
-        public static string GetSafeExportPath(string destinationDirectory, string originalFileName)
+        public static bool IsValidDestinationDirectory(string destinationDirectory)
         {
-            if (!Directory.Exists(destinationDirectory))
+            if (string.IsNullOrWhiteSpace(destinationDirectory)) return false;
+            try
             {
-                Directory.CreateDirectory(destinationDirectory);
+                string full = Path.GetFullPath(destinationDirectory);
+                string root = Path.GetPathRoot(full);
+                return !string.IsNullOrEmpty(root) && full.Length >= root.Length;
             }
-
-            string safeFileName = SanitizeFileName(originalFileName);
-            string targetPath = Path.Combine(destinationDirectory, safeFileName);
-
-            // If file already exists, avoid overwriting by appending (1), (2), etc.
-            if (File.Exists(targetPath))
+            catch
             {
-                string nameWithoutExt = Path.GetFileNameWithoutExtension(safeFileName);
-                string ext = Path.GetExtension(safeFileName);
-
-                int counter = 1;
-                while (File.Exists(targetPath) && counter < 10000)
-                {
-                    string numberedName = string.Format("{0} ({1}){2}", nameWithoutExt, counter, ext);
-                    targetPath = Path.Combine(destinationDirectory, numberedName);
-                    counter++;
-                }
+                return false;
             }
-
-            return targetPath;
         }
 
         public static bool IsSafeDeletionTarget(AndroidFileItem item)
         {
-            if (item == null) return false;
-
-            // Never delete folders directly - only individual files
-            if (item.IsFolder) return false;
-
+            if (item == null || item.IsFolder || item.ShellItem == null) return false;
             if (string.IsNullOrWhiteSpace(item.Name)) return false;
 
-            string dir = (item.DirectoryPath ?? "").Trim();
+            string dir = (item.DirectoryPath ?? "").Replace('/', '\\').Trim();
 
-            // Guard against root storage deletion
-            if (dir == "" || dir == @"\" || dir == "/" ||
+            if (string.IsNullOrEmpty(dir) || dir == @"\" ||
                 string.Equals(dir, @"\Internal shared storage", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(dir, @"\SD card", StringComparison.OrdinalIgnoreCase))
             {
-                return false;
+                // Wait: files directly inside the root of Internal shared storage have DirectoryPath == "\Internal shared storage".
+                // We DO want to allow deleting a user file (like a stray .apk or .log) in root storage,
+                // as long as item.IsFolder == false and item.Name is not a system folder name!
+                if (string.Equals(item.Name, "Android", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(item.Name, "system", StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+                return !string.IsNullOrEmpty(dir) && dir != @"\";
             }
 
-            // Guard against system Android folders
-            if (dir.IndexOf(@"\Android\data", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                dir.IndexOf(@"\Android\obb", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                dir.IndexOf(@"\system", StringComparison.OrdinalIgnoreCase) >= 0)
+            foreach (string protectedPath in ProtectedSystemPaths)
             {
-                return false;
+                if (dir.IndexOf(protectedPath, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return false;
+                }
             }
 
             return true;

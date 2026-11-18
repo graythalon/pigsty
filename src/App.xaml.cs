@@ -16,8 +16,8 @@ namespace Pigsty
         private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
             MessageBox.Show(
-                string.Format("Pigsty encountered an error:\n\n{0}\n\nStack:\n{1}", e.Exception.Message, e.Exception.StackTrace),
-                "Pigsty Notice",
+                e.Exception != null ? e.Exception.Message : "Unexpected error.",
+                "Pigsty",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
             e.Handled = true;
@@ -29,8 +29,8 @@ namespace Pigsty
             if (ex != null)
             {
                 MessageBox.Show(
-                    string.Format("Pigsty encountered a system error:\n\n{0}", ex.Message),
-                    "Pigsty System Notice",
+                    ex.Message,
+                    "Pigsty",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }

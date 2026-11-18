@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Pigsty"
         Icon="app.ico"
-        Height="720" Width="1150" MinHeight="620" MinWidth="900"
+        Height="700" Width="1100" MinHeight="560" MinWidth="860"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource BgDarkBrush}"
         Foreground="{StaticResource TextPrimaryBrush}">
@@ -18,20 +18,16 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <!-- Header Bar -->
-            <RowDefinition Height="52" />
-            <!-- Storage Overview Bar -->
+            <RowDefinition Height="48" />
             <RowDefinition Height="Auto" />
-            <!-- Main Content Area -->
             <RowDefinition Height="*" />
-            <!-- Bottom Status Bar -->
-            <RowDefinition Height="28" />
+            <RowDefinition Height="26" />
         </Grid.RowDefinitions>
 
-        <!-- TOP HEADER BAR -->
+        <!-- HEADER BAR -->
         <Border Grid.Row="0" Background="{StaticResource PanelDarkBrush}"
                 BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="0,0,0,1"
-                Padding="16,0">
+                Padding="14,0">
             <Grid VerticalAlignment="Center">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -41,46 +37,37 @@
 
                 <!-- Brand -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Background="#252F3F" CornerRadius="6" Width="32" Height="32" Margin="0,0,10,0">
-                        <TextBlock Text="🐽" FontSize="17" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <Border Background="#232938" CornerRadius="6" Width="28" Height="28" Margin="0,0,8,0">
+                        <TextBlock Text="🐽" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="Pigsty" FontSize="16" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" />
-                        <TextBlock Text="Android Storage Manager" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
-                    </StackPanel>
+                    <TextBlock Text="Pigsty" FontSize="15" FontWeight="Bold" VerticalAlignment="Center" />
                 </StackPanel>
 
                 <!-- Controls -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Ellipse x:Name="StatusDot" Width="7" Height="7" Fill="{StaticResource TextMutedBrush}"
+                             VerticalAlignment="Center" Margin="0,0,8,0" ToolTip="Disconnected" />
+
                     <ComboBox x:Name="DeviceComboBox" Style="{StaticResource CleanComboBoxStyle}"
-                              Width="220" Height="30" Margin="0,0,8,0"
+                              Width="200" Height="28" Margin="0,0,8,0" Visibility="Collapsed"
                               SelectionChanged="DeviceComboBox_SelectionChanged" />
 
-                    <!-- Status Indicator -->
-                    <Border x:Name="ConnectionBadge" Background="#1C3829" BorderBrush="#235E3B" BorderThickness="1"
-                            CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Ellipse x:Name="StatusDot" Width="6" Height="6" Fill="{StaticResource SuccessBrush}" Margin="0,0,6,0" />
-                            <TextBlock x:Name="StatusLabel" Text="Connected" FontSize="11" Foreground="{StaticResource SuccessBrush}" FontWeight="Medium" />
-                        </StackPanel>
-                    </Border>
-
-                    <Button x:Name="RefreshDevicesButton" Content="Scan"
+                    <Button x:Name="RefreshDevicesButton" Content="↻ Scan"
                             Style="{StaticResource SecondaryButtonStyle}"
-                            Height="30" Margin="0,0,6,0" Click="RefreshDevicesButton_Click" />
+                            Height="28" Margin="0,0,6,0" Click="RefreshDevicesButton_Click" />
 
-                    <Button x:Name="AboutButton" Content="About"
+                    <Button x:Name="AboutButton" Content="?" ToolTip="About"
                             Style="{StaticResource SecondaryButtonStyle}"
-                            Height="30" Click="AboutButton_Click" />
+                            Width="28" Height="28" Padding="0" Click="AboutButton_Click" />
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!-- STORAGE OVERVIEW BAR -->
-        <Border x:Name="StorageOverviewPanel" Grid.Row="1"
+        <!-- STORAGE BAR -->
+        <Border x:Name="StorageOverviewPanel" Grid.Row="1" Visibility="Collapsed"
                 Background="{StaticResource PanelAltBrush}"
                 BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="0,0,0,1"
-                Padding="20,12">
+                Padding="16,10">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -88,7 +75,7 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <Grid Grid.Row="0" Margin="0,0,0,8">
+                <Grid Grid.Row="0" Margin="0,0,0,6">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
@@ -96,119 +83,112 @@
 
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock x:Name="DeviceTitleText" Text="Device"
-                                   FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,8,0" />
-                        <TextBlock Text="•" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,8,0" />
-                        <TextBlock x:Name="StorageVolumeText" Text="Storage"
-                                   FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
+                                   FontSize="13" FontWeight="SemiBold" Margin="0,0,8,0" />
+                        <TextBlock x:Name="StorageVolumeText" Text=""
+                                   FontSize="12" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock x:Name="StorageCapacityText" Text="0 B used"
-                                   FontSize="12" FontWeight="Medium" Foreground="{StaticResource TextPrimaryBrush}" />
+                        <TextBlock x:Name="StorageCapacityText" Text="0 B"
+                                   FontSize="12" FontWeight="SemiBold" Margin="0,0,8,0" />
+                        <TextBlock x:Name="LegendFreeText" Text=""
+                                   FontSize="11.5" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
                     </StackPanel>
                 </Grid>
 
-                <!-- Multi-segment Storage Bar -->
-                <Border Grid.Row="1" Height="10" Background="{StaticResource FreeSpaceBrush}"
-                        CornerRadius="5" ClipToBounds="True" Margin="0,0,0,10">
+                <!-- Proportional Bar -->
+                <Border Grid.Row="1" Height="8" Background="{StaticResource FreeSpaceBrush}"
+                        CornerRadius="4" ClipToBounds="True" Margin="0,0,0,8">
                     <Grid x:Name="StorageBarGrid">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition x:Name="ColPhotos" Width="15*" />
-                            <ColumnDefinition x:Name="ColVideos" Width="25*" />
-                            <ColumnDefinition x:Name="ColAudio" Width="8*" />
-                            <ColumnDefinition x:Name="ColDocs" Width="4*" />
-                            <ColumnDefinition x:Name="ColApks" Width="6*" />
-                            <ColumnDefinition x:Name="ColDownloads" Width="5*" />
-                            <ColumnDefinition x:Name="ColArchives" Width="3*" />
-                            <ColumnDefinition x:Name="ColOther" Width="4*" />
-                            <ColumnDefinition x:Name="ColFree" Width="30*" />
+                            <ColumnDefinition x:Name="ColPhotos" Width="1*" />
+                            <ColumnDefinition x:Name="ColVideos" Width="1*" />
+                            <ColumnDefinition x:Name="ColAudio" Width="1*" />
+                            <ColumnDefinition x:Name="ColDocs" Width="1*" />
+                            <ColumnDefinition x:Name="ColApks" Width="1*" />
+                            <ColumnDefinition x:Name="ColDownloads" Width="1*" />
+                            <ColumnDefinition x:Name="ColArchives" Width="1*" />
+                            <ColumnDefinition x:Name="ColOther" Width="1*" />
+                            <ColumnDefinition x:Name="ColFree" Width="10*" />
                         </Grid.ColumnDefinitions>
 
                         <Rectangle Grid.Column="0" Fill="{StaticResource PhotosBrush}" ToolTip="Photos" />
                         <Rectangle Grid.Column="1" Fill="{StaticResource VideosBrush}" ToolTip="Videos" />
                         <Rectangle Grid.Column="2" Fill="{StaticResource AudioBrush}" ToolTip="Audio" />
-                        <Rectangle Grid.Column="3" Fill="{StaticResource DocsBrush}" ToolTip="Documents" />
+                        <Rectangle Grid.Column="3" Fill="{StaticResource DocsBrush}" ToolTip="Docs" />
                         <Rectangle Grid.Column="4" Fill="{StaticResource ApksBrush}" ToolTip="APKs" />
                         <Rectangle Grid.Column="5" Fill="{StaticResource DownloadsBrush}" ToolTip="Downloads" />
                         <Rectangle Grid.Column="6" Fill="{StaticResource ArchivesBrush}" ToolTip="Archives" />
                         <Rectangle Grid.Column="7" Fill="{StaticResource OtherBrush}" ToolTip="Other" />
-                        <Rectangle Grid.Column="8" Fill="{StaticResource FreeSpaceBrush}" ToolTip="Free Space" />
+                        <Rectangle Grid.Column="8" Fill="{StaticResource FreeSpaceBrush}" ToolTip="Free" />
                     </Grid>
                 </Border>
 
-                <!-- Category Legend -->
+                <!-- Compact Legend -->
                 <WrapPanel Grid.Row="2" Orientation="Horizontal">
-                    <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
-                        <Ellipse Width="8" Height="8" Fill="{StaticResource PhotosBrush}" Margin="0,0,5,0" />
-                        <TextBlock Text="Photos: " FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
-                        <TextBlock x:Name="LegendPhotosText" Text="0 B" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,14,0">
+                        <Ellipse Width="7" Height="7" Fill="{StaticResource PhotosBrush}" Margin="0,0,5,0" />
+                        <TextBlock Text="Photos " FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+                        <TextBlock x:Name="LegendPhotosText" Text="0 B" FontSize="11" FontWeight="Medium" />
                     </StackPanel>
 
-                    <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
-                        <Ellipse Width="8" Height="8" Fill="{StaticResource VideosBrush}" Margin="0,0,5,0" />
-                        <TextBlock Text="Videos: " FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
-                        <TextBlock x:Name="LegendVideosText" Text="0 B" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,14,0">
+                        <Ellipse Width="7" Height="7" Fill="{StaticResource VideosBrush}" Margin="0,0,5,0" />
+                        <TextBlock Text="Videos " FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+                        <TextBlock x:Name="LegendVideosText" Text="0 B" FontSize="11" FontWeight="Medium" />
                     </StackPanel>
 
-                    <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
-                        <Ellipse Width="8" Height="8" Fill="{StaticResource AudioBrush}" Margin="0,0,5,0" />
-                        <TextBlock Text="Audio: " FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
-                        <TextBlock x:Name="LegendAudioText" Text="0 B" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,14,0">
+                        <Ellipse Width="7" Height="7" Fill="{StaticResource AudioBrush}" Margin="0,0,5,0" />
+                        <TextBlock Text="Audio " FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+                        <TextBlock x:Name="LegendAudioText" Text="0 B" FontSize="11" FontWeight="Medium" />
                     </StackPanel>
 
-                    <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
-                        <Ellipse Width="8" Height="8" Fill="{StaticResource DocsBrush}" Margin="0,0,5,0" />
-                        <TextBlock Text="Docs: " FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
-                        <TextBlock x:Name="LegendDocsText" Text="0 B" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,14,0">
+                        <Ellipse Width="7" Height="7" Fill="{StaticResource DocsBrush}" Margin="0,0,5,0" />
+                        <TextBlock Text="Docs " FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+                        <TextBlock x:Name="LegendDocsText" Text="0 B" FontSize="11" FontWeight="Medium" />
                     </StackPanel>
 
-                    <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
-                        <Ellipse Width="8" Height="8" Fill="{StaticResource ApksBrush}" Margin="0,0,5,0" />
-                        <TextBlock Text="APKs: " FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
-                        <TextBlock x:Name="LegendApksText" Text="0 B" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,14,0">
+                        <Ellipse Width="7" Height="7" Fill="{StaticResource ApksBrush}" Margin="0,0,5,0" />
+                        <TextBlock Text="APKs " FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+                        <TextBlock x:Name="LegendApksText" Text="0 B" FontSize="11" FontWeight="Medium" />
                     </StackPanel>
 
-                    <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
-                        <Ellipse Width="8" Height="8" Fill="{StaticResource DownloadsBrush}" Margin="0,0,5,0" />
-                        <TextBlock Text="Downloads: " FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
-                        <TextBlock x:Name="LegendDownloadsText" Text="0 B" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
-                    </StackPanel>
-
-                    <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
-                        <Ellipse Width="8" Height="8" Fill="{StaticResource ArchivesBrush}" Margin="0,0,5,0" />
-                        <TextBlock Text="Archives: " FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
-                        <TextBlock x:Name="LegendArchivesText" Text="0 B" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,14,0">
+                        <Ellipse Width="7" Height="7" Fill="{StaticResource DownloadsBrush}" Margin="0,0,5,0" />
+                        <TextBlock Text="Downloads " FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+                        <TextBlock x:Name="LegendDownloadsText" Text="0 B" FontSize="11" FontWeight="Medium" />
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal">
-                        <Ellipse Width="8" Height="8" Fill="{StaticResource FreeSpaceBrush}" Margin="0,0,5,0" />
-                        <TextBlock Text="Free: " FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
-                        <TextBlock x:Name="LegendFreeText" Text="0 B" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                        <Ellipse Width="7" Height="7" Fill="{StaticResource ArchivesBrush}" Margin="0,0,5,0" />
+                        <TextBlock Text="Archives " FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+                        <TextBlock x:Name="LegendArchivesText" Text="0 B" FontSize="11" FontWeight="Medium" />
                     </StackPanel>
                 </WrapPanel>
             </Grid>
         </Border>
 
-        <!-- MAIN CONTENT AREA -->
+        <!-- MAIN WORKSPACE -->
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <!-- Left Sidebar -->
-                <ColumnDefinition Width="210" />
-                <!-- Right Workspace -->
+                <ColumnDefinition Width="185" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <!-- LEFT SIDEBAR -->
+            <!-- SIDEBAR -->
             <Border Grid.Column="0" Background="{StaticResource PanelDarkBrush}"
                     BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="0,0,1,0">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Margin="10,12,10,12">
+                    <StackPanel Margin="8,10">
                         <ListBox x:Name="CategoryListBox" Background="Transparent" BorderThickness="0"
                                  SelectionChanged="CategoryListBox_SelectionChanged">
                             <ListBox.ItemContainerStyle>
                                 <Style TargetType="ListBoxItem">
-                                    <Setter Property="Padding" Value="10,8" />
-                                    <Setter Property="Margin" Value="0,2" />
+                                    <Setter Property="Padding" Value="10,7" />
+                                    <Setter Property="Margin" Value="0,1" />
                                     <Setter Property="Cursor" Value="Hand" />
                                     <Setter Property="Template">
                                         <Setter.Value>
@@ -219,10 +199,10 @@
                                                 </Border>
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter TargetName="ItemBorder" Property="Background" Value="#252A36" />
+                                                        <Setter TargetName="ItemBorder" Property="Background" Value="#222734" />
                                                     </Trigger>
                                                     <Trigger Property="IsSelected" Value="True">
-                                                        <Setter TargetName="ItemBorder" Property="Background" Value="#28334E" />
+                                                        <Setter TargetName="ItemBorder" Property="Background" Value="#25324E" />
                                                     </Trigger>
                                                 </ControlTemplate.Triggers>
                                             </ControlTemplate>
@@ -232,129 +212,129 @@
                             </ListBox.ItemContainerStyle>
 
                             <ListBoxItem Tag="Overview" IsSelected="True">
-                                <Grid Width="170">
+                                <Grid Width="148">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="24" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="📊" FontSize="14" Margin="0,0,10,0" />
+                                    <TextBlock Grid.Column="0" Text="📊" FontSize="13" VerticalAlignment="Center" />
                                     <TextBlock Grid.Column="1" Text="Overview" FontWeight="Medium" VerticalAlignment="Center" />
                                 </Grid>
                             </ListBoxItem>
 
                             <ListBoxItem Tag="Photos">
-                                <Grid Width="170">
+                                <Grid Width="148">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="24" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="📸" FontSize="14" Margin="0,0,10,0" />
+                                    <TextBlock Grid.Column="0" Text="📸" FontSize="13" VerticalAlignment="Center" />
                                     <TextBlock Grid.Column="1" Text="Photos" VerticalAlignment="Center" />
                                     <TextBlock x:Name="PhotosBadge" Grid.Column="2" Text="0" FontSize="11" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
                                 </Grid>
                             </ListBoxItem>
 
                             <ListBoxItem Tag="Videos">
-                                <Grid Width="170">
+                                <Grid Width="148">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="24" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="🎬" FontSize="14" Margin="0,0,10,0" />
+                                    <TextBlock Grid.Column="0" Text="🎬" FontSize="13" VerticalAlignment="Center" />
                                     <TextBlock Grid.Column="1" Text="Videos" VerticalAlignment="Center" />
                                     <TextBlock x:Name="VideosBadge" Grid.Column="2" Text="0" FontSize="11" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
                                 </Grid>
                             </ListBoxItem>
 
                             <ListBoxItem Tag="Audio">
-                                <Grid Width="170">
+                                <Grid Width="148">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="24" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="🎵" FontSize="14" Margin="0,0,10,0" />
+                                    <TextBlock Grid.Column="0" Text="🎵" FontSize="13" VerticalAlignment="Center" />
                                     <TextBlock Grid.Column="1" Text="Audio" VerticalAlignment="Center" />
                                     <TextBlock x:Name="AudioBadge" Grid.Column="2" Text="0" FontSize="11" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
                                 </Grid>
                             </ListBoxItem>
 
                             <ListBoxItem Tag="Documents">
-                                <Grid Width="170">
+                                <Grid Width="148">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="24" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="📄" FontSize="14" Margin="0,0,10,0" />
-                                    <TextBlock Grid.Column="1" Text="Documents" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="0" Text="📄" FontSize="13" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="Docs" VerticalAlignment="Center" />
                                     <TextBlock x:Name="DocsBadge" Grid.Column="2" Text="0" FontSize="11" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
                                 </Grid>
                             </ListBoxItem>
 
                             <ListBoxItem Tag="Apks">
-                                <Grid Width="170">
+                                <Grid Width="148">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="24" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="📦" FontSize="14" Margin="0,0,10,0" />
+                                    <TextBlock Grid.Column="0" Text="📦" FontSize="13" VerticalAlignment="Center" />
                                     <TextBlock Grid.Column="1" Text="APKs" VerticalAlignment="Center" />
                                     <TextBlock x:Name="ApksBadge" Grid.Column="2" Text="0" FontSize="11" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
                                 </Grid>
                             </ListBoxItem>
 
                             <ListBoxItem Tag="Downloads">
-                                <Grid Width="170">
+                                <Grid Width="148">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="24" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="📥" FontSize="14" Margin="0,0,10,0" />
+                                    <TextBlock Grid.Column="0" Text="📥" FontSize="13" VerticalAlignment="Center" />
                                     <TextBlock Grid.Column="1" Text="Downloads" VerticalAlignment="Center" />
                                     <TextBlock x:Name="DownloadsBadge" Grid.Column="2" Text="0" FontSize="11" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
                                 </Grid>
                             </ListBoxItem>
 
                             <ListBoxItem Tag="Archives">
-                                <Grid Width="170">
+                                <Grid Width="148">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="24" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="🗃️" FontSize="14" Margin="0,0,10,0" />
+                                    <TextBlock Grid.Column="0" Text="🗃️" FontSize="13" VerticalAlignment="Center" />
                                     <TextBlock Grid.Column="1" Text="Archives" VerticalAlignment="Center" />
                                     <TextBlock x:Name="ArchivesBadge" Grid.Column="2" Text="0" FontSize="11" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
                                 </Grid>
                             </ListBoxItem>
 
                             <ListBoxItem Tag="LargeFiles">
-                                <Grid Width="170">
+                                <Grid Width="148">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="24" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="⚠️" FontSize="14" Margin="0,0,10,0" />
-                                    <TextBlock Grid.Column="1" Text="Large Files" VerticalAlignment="Center" />
-                                    <TextBlock x:Name="LargeFilesBadge" Grid.Column="2" Text="0" FontSize="11" Foreground="#EF4444" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="0" Text="⚠️" FontSize="13" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="Large" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="LargeFilesBadge" Grid.Column="2" Text="0" FontSize="11" Foreground="{StaticResource DangerBrush}" VerticalAlignment="Center" />
                                 </Grid>
                             </ListBoxItem>
 
                             <ListBoxItem Tag="AllFiles">
-                                <Grid Width="170">
+                                <Grid Width="148">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="24" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="📁" FontSize="14" Margin="0,0,10,0" />
-                                    <TextBlock Grid.Column="1" Text="All Files" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="0" Text="📁" FontSize="13" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="All" VerticalAlignment="Center" />
                                     <TextBlock x:Name="AllFilesBadge" Grid.Column="2" Text="0" FontSize="11" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
                                 </Grid>
                             </ListBoxItem>
@@ -363,32 +343,31 @@
                 </ScrollViewer>
             </Border>
 
-            <!-- RIGHT WORKSPACE -->
+            <!-- CONTENT AREA -->
             <Grid Grid.Column="1" Background="{StaticResource BgDarkBrush}">
 
-                <!-- OVERLAY: NO DEVICE CONNECTED -->
-                <Grid x:Name="NoDeviceOverlay" Visibility="Collapsed" Background="{StaticResource BgDarkBrush}">
-                    <Border MaxWidth="440" Background="{StaticResource PanelDarkBrush}"
+                <!-- NO DEVICE OVERLAY -->
+                <Grid x:Name="NoDeviceOverlay" Visibility="Visible" Background="{StaticResource BgDarkBrush}">
+                    <Border Width="280" Background="{StaticResource PanelDarkBrush}"
                             BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1"
-                            CornerRadius="8" Padding="28" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            CornerRadius="8" Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center">
                         <StackPanel HorizontalAlignment="Center">
-                            <TextBlock Text="📱" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,12" />
-                            <TextBlock Text="No Device Connected" FontSize="16" FontWeight="SemiBold"
-                                       Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,6" />
-                            <TextBlock Text="Connect your Android device via USB and select 'File Transfer' (MTP)."
-                                       FontSize="12" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,0,0,18" />
+                            <TextBlock Text="📱" FontSize="32" HorizontalAlignment="Center" Margin="0,0,0,10" />
+                            <TextBlock Text="Connect Android via USB (MTP)"
+                                       FontSize="13" FontWeight="Medium" Foreground="{StaticResource TextMutedBrush}"
+                                       HorizontalAlignment="Center" Margin="0,0,0,16" />
 
-                            <Button Content="Scan for Devices" Style="{StaticResource PrimaryButtonStyle}"
-                                    Padding="16,8" HorizontalAlignment="Center" Click="RefreshDevicesButton_Click" />
+                            <Button Content="↻ Scan" Style="{StaticResource PrimaryButtonStyle}"
+                                    Width="110" Height="30" HorizontalAlignment="Center" Click="RefreshDevicesButton_Click" />
                         </StackPanel>
                     </Border>
                 </Grid>
 
-                <!-- VIEW 1: DASHBOARD / OVERVIEW -->
-                <ScrollViewer x:Name="DashboardView" Visibility="Visible" Padding="20">
+                <!-- DASHBOARD VIEW -->
+                <ScrollViewer x:Name="DashboardView" Visibility="Collapsed" Padding="18">
                     <StackPanel>
-                        <!-- 4 Stat Cards -->
-                        <Grid Margin="0,0,0,20">
+                        <!-- 4 Interactive Stat Cards -->
+                        <Grid Margin="0,0,0,16">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="*" />
@@ -396,76 +375,89 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
 
-                            <!-- Card 1: Media -->
-                            <Border Grid.Column="0" Background="{StaticResource PanelDarkBrush}"
-                                    BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1"
-                                    CornerRadius="6" Padding="14" Margin="0,0,10,0">
+                            <!-- Media -->
+                            <Border Grid.Column="0" Style="{StaticResource StatCardStyle}" Margin="0,0,10,0"
+                                    MouseLeftButtonUp="CardMedia_Click">
                                 <StackPanel>
-                                    <TextBlock Text="Media" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-                                    <TextBlock x:Name="DashMediaSize" Text="0 B" FontSize="20" FontWeight="Bold" Foreground="{StaticResource PhotosBrush}" Margin="0,4,0,2" />
-                                    <TextBlock x:Name="DashMediaCount" Text="0 items" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+                                    <Grid>
+                                        <TextBlock Text="📸 Media" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+                                        <TextBlock x:Name="DashMediaCount" Text="0" FontSize="11" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Right" />
+                                    </Grid>
+                                    <TextBlock x:Name="DashMediaSize" Text="0 B" FontSize="20" FontWeight="Bold" Foreground="{StaticResource PhotosBrush}" Margin="0,6,0,0" />
                                 </StackPanel>
                             </Border>
 
-                            <!-- Card 2: APKs -->
-                            <Border Grid.Column="1" Background="{StaticResource PanelDarkBrush}"
-                                    BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1"
-                                    CornerRadius="6" Padding="14" Margin="0,0,10,0">
+                            <!-- APKs -->
+                            <Border Grid.Column="1" Style="{StaticResource StatCardStyle}" Margin="0,0,10,0"
+                                    MouseLeftButtonUp="CardApks_Click">
                                 <StackPanel>
-                                    <TextBlock Text="APKs" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-                                    <TextBlock x:Name="DashApksSize" Text="0 B" FontSize="20" FontWeight="Bold" Foreground="{StaticResource ApksBrush}" Margin="0,4,0,2" />
-                                    <TextBlock x:Name="DashApksCount" Text="0 packages" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+                                    <Grid>
+                                        <TextBlock Text="📦 APKs" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+                                        <TextBlock x:Name="DashApksCount" Text="0" FontSize="11" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Right" />
+                                    </Grid>
+                                    <TextBlock x:Name="DashApksSize" Text="0 B" FontSize="20" FontWeight="Bold" Foreground="{StaticResource ApksBrush}" Margin="0,6,0,0" />
                                 </StackPanel>
                             </Border>
 
-                            <!-- Card 3: Large Files -->
-                            <Border Grid.Column="2" Background="{StaticResource PanelDarkBrush}"
-                                    BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1"
-                                    CornerRadius="6" Padding="14" Margin="0,0,10,0">
+                            <!-- Large -->
+                            <Border Grid.Column="2" Style="{StaticResource StatCardStyle}" Margin="0,0,10,0"
+                                    MouseLeftButtonUp="CardLarge_Click">
                                 <StackPanel>
-                                    <TextBlock Text="Large Files" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-                                    <TextBlock x:Name="DashLargeSize" Text="0 B" FontSize="20" FontWeight="Bold" Foreground="{StaticResource DangerBrush}" Margin="0,4,0,2" />
-                                    <TextBlock x:Name="DashLargeCount" Text="0 items" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+                                    <Grid>
+                                        <TextBlock Text="⚠️ Large" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+                                        <TextBlock x:Name="DashLargeCount" Text="0" FontSize="11" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Right" />
+                                    </Grid>
+                                    <TextBlock x:Name="DashLargeSize" Text="0 B" FontSize="20" FontWeight="Bold" Foreground="{StaticResource DangerBrush}" Margin="0,6,0,0" />
                                 </StackPanel>
                             </Border>
 
-                            <!-- Card 4: Downloads -->
-                            <Border Grid.Column="3" Background="{StaticResource PanelDarkBrush}"
-                                    BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1"
-                                    CornerRadius="6" Padding="14">
+                            <!-- Downloads -->
+                            <Border Grid.Column="3" Style="{StaticResource StatCardStyle}"
+                                    MouseLeftButtonUp="CardDownloads_Click">
                                 <StackPanel>
-                                    <TextBlock Text="Downloads" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-                                    <TextBlock x:Name="DashDownloadsSize" Text="0 B" FontSize="20" FontWeight="Bold" Foreground="{StaticResource DownloadsBrush}" Margin="0,4,0,2" />
-                                    <TextBlock x:Name="DashDownloadsCount" Text="0 files" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+                                    <Grid>
+                                        <TextBlock Text="📥 Downloads" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+                                        <TextBlock x:Name="DashDownloadsCount" Text="0" FontSize="11" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Right" />
+                                    </Grid>
+                                    <TextBlock x:Name="DashDownloadsSize" Text="0 B" FontSize="20" FontWeight="Bold" Foreground="{StaticResource DownloadsBrush}" Margin="0,6,0,0" />
                                 </StackPanel>
                             </Border>
                         </Grid>
 
-                        <!-- Largest Files Section -->
+                        <!-- Largest Files -->
                         <Border Background="{StaticResource PanelDarkBrush}"
                                 BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1"
-                                CornerRadius="6" Padding="16">
+                                CornerRadius="6" Padding="14">
                             <StackPanel>
-                                <Grid Margin="0,0,0,12">
+                                <Grid Margin="0,0,0,10">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Largest Files"
-                                               FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
-                                    <Button Grid.Column="1" Content="View All"
+                                    <TextBlock Grid.Column="0" Text="Largest"
+                                               FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <Button Grid.Column="1" Content="All →"
                                             Style="{StaticResource SecondaryButtonStyle}"
-                                            Click="ViewAllLargeFilesButton_Click" />
+                                            Padding="8,3" FontSize="11"
+                                            Click="CardLarge_Click" />
                                 </Grid>
 
-                                <DataGrid x:Name="TopFilesGrid" Style="{StaticResource ModernDataGridStyle}" MaxHeight="350">
+                                <DataGrid x:Name="TopFilesGrid" Style="{StaticResource ModernDataGridStyle}"
+                                          MaxHeight="340" IsReadOnly="True">
+                                    <DataGrid.ContextMenu>
+                                        <ContextMenu Background="{StaticResource PanelDarkBrush}">
+                                            <MenuItem Header="Export" Click="TopFileExport_Click" />
+                                            <MenuItem Header="Delete" Click="TopFileDelete_Click" />
+                                            <Separator />
+                                            <MenuItem Header="Copy Name" Click="TopFileCopyName_Click" />
+                                            <MenuItem Header="Copy Path" Click="TopFileCopyPath_Click" />
+                                        </ContextMenu>
+                                    </DataGrid.ContextMenu>
                                     <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Type" Binding="{Binding IconGlyph}" Width="45" IsReadOnly="True" />
-                                        <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="3*" IsReadOnly="True" />
-                                        <DataGridTextColumn Header="Category" Binding="{Binding CategoryName}" Width="100" IsReadOnly="True" />
-                                        <DataGridTextColumn Header="Size" Binding="{Binding FormattedSize}" Width="90" IsReadOnly="True" />
-                                        <DataGridTextColumn Header="Date" Binding="{Binding FormattedDate}" Width="130" IsReadOnly="True" />
-                                        <DataGridTextColumn Header="Location" Binding="{Binding DirectoryPath}" Width="3*" IsReadOnly="True" />
+                                        <DataGridTextColumn Header="" Binding="{Binding IconGlyph}" Width="34" />
+                                        <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="3*" />
+                                        <DataGridTextColumn Header="Size" Binding="{Binding FormattedSize}" Width="90" />
+                                        <DataGridTextColumn Header="Path" Binding="{Binding DirectoryPath}" Width="2*" />
                                     </DataGrid.Columns>
                                 </DataGrid>
                             </StackPanel>
@@ -473,118 +465,84 @@
                     </StackPanel>
                 </ScrollViewer>
 
-                <!-- VIEW 2: CATEGORY FILE LIST VIEW -->
-                <Grid x:Name="CategoryFileListView" Visibility="Collapsed" AllowDrop="True"
-                      DragEnter="CategoryFileListView_DragEnter" Drop="CategoryFileListView_Drop">
+                <!-- FILE LIST VIEW -->
+                <Grid x:Name="CategoryFileListView" Visibility="Collapsed"
+                      AllowDrop="True" DragEnter="CategoryFileListView_DragEnter" Drop="CategoryFileListView_Drop">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <!-- Category Title Header -->
-                    <Border Grid.Row="0" Background="{StaticResource PanelAltBrush}"
+                    <!-- Single Unified Toolbar -->
+                    <Border Grid.Row="0" Background="{StaticResource PanelDarkBrush}"
                             BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="0,0,0,1"
-                            Padding="16,10">
+                            Padding="12,8">
                         <Grid>
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
-                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock x:Name="CategoryViewIcon" Text="📁" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center" />
-                                <TextBlock x:Name="CategoryViewTitle" Text="Files" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
-                                <Border Background="#252F3F" CornerRadius="10" Padding="8,2" VerticalAlignment="Center">
-                                    <TextBlock x:Name="CategoryViewCountSize" Text="0 items" FontSize="11" Foreground="{StaticResource AccentBlueBrush}" FontWeight="Medium" />
+                            <!-- Category Title & Badge -->
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
+                                <TextBlock x:Name="CategoryViewIcon" Text="📸" FontSize="15" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock x:Name="CategoryViewTitle" Text="Photos" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                <Border Background="#232938" CornerRadius="8" Padding="7,2" VerticalAlignment="Center">
+                                    <TextBlock x:Name="CategoryViewCountSize" Text="0" FontSize="11" Foreground="{StaticResource AccentBlueBrush}" FontWeight="Medium" />
                                 </Border>
                             </StackPanel>
 
-                            <!-- Search Box -->
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBox x:Name="SearchBox" Style="{StaticResource SearchTextBoxStyle}"
-                                         Width="180" Height="28" TextChanged="SearchBox_TextChanged" />
-                            </StackPanel>
-                        </Grid>
-                    </Border>
-
-                    <!-- File Operations Toolbar -->
-                    <Border Grid.Row="1" Background="{StaticResource PanelDarkBrush}"
-                            BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="0,0,0,1"
-                            Padding="14,8">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
                             <!-- Action Buttons -->
-                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                <Button x:Name="ExportButton" Content="Export" Style="{StaticResource PrimaryButtonStyle}"
-                                        Height="28" Margin="0,0,8,0" Click="ExportButton_Click" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button x:Name="ExportButton" Content="↓ Export" Style="{StaticResource PrimaryButtonStyle}"
+                                        Height="27" Margin="0,0,6,0" Click="ExportButton_Click" />
 
-                                <Button x:Name="ImportButton" Content="Import" Style="{StaticResource SecondaryButtonStyle}"
-                                        Height="28" Margin="0,0,8,0" Click="ImportButton_Click" />
+                                <Button x:Name="ImportButton" Content="↑ Import" Style="{StaticResource SecondaryButtonStyle}"
+                                        Height="27" Margin="0,0,6,0" Click="ImportButton_Click" />
 
-                                <Button x:Name="DeleteButton" Content="Delete" Style="{StaticResource DangerButtonStyle}"
-                                        Height="28" Margin="0,0,14,0" Click="DeleteButton_Click" />
+                                <Button x:Name="DeleteButton" Content="✕ Delete" Style="{StaticResource DangerButtonStyle}"
+                                        Height="27" Margin="0,0,10,0" Click="DeleteButton_Click" />
 
-                                <Border Width="1" Height="16" Background="{StaticResource BorderDarkBrush}" Margin="0,0,14,0" />
+                                <Border Width="1" Height="16" Background="{StaticResource BorderDarkBrush}" Margin="0,0,10,0" />
 
-                                <Button x:Name="SelectAllButton" Content="Select All" Style="{StaticResource SecondaryButtonStyle}"
-                                        Height="28" Margin="0,0,6,0" Click="SelectAllButton_Click" />
+                                <Button x:Name="SelectAllButton" Content="✓ All" Style="{StaticResource SecondaryButtonStyle}"
+                                        Height="27" Margin="0,0,5,0" Click="SelectAllButton_Click" />
 
-                                <Button x:Name="ClearSelectionButton" Content="Clear" Style="{StaticResource SecondaryButtonStyle}"
-                                        Height="28" Margin="0,0,6,0" Click="ClearSelectionButton_Click" />
+                                <Button x:Name="ClearSelectionButton" Content="✕ None" Style="{StaticResource SecondaryButtonStyle}"
+                                        Height="27" Click="ClearSelectionButton_Click" />
                             </StackPanel>
 
-                            <!-- Sort Selector -->
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="Sort:" FontSize="11" Foreground="{StaticResource TextMutedBrush}"
-                                           VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <!-- Filter & Sort -->
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBox x:Name="SearchBox" Style="{StaticResource SearchTextBoxStyle}"
+                                         Width="150" Height="27" Margin="0,0,6,0" TextChanged="SearchBox_TextChanged" />
+
                                 <ComboBox x:Name="SortComboBox" Style="{StaticResource CleanComboBoxStyle}"
-                                          Width="130" Height="28" SelectionChanged="SortComboBox_SelectionChanged">
+                                          Width="100" Height="27" SelectionChanged="SortComboBox_SelectionChanged">
                                     <ComboBoxItem Content="Name" IsSelected="True" />
-                                    <ComboBoxItem Content="Size (Largest)" />
-                                    <ComboBoxItem Content="Size (Smallest)" />
-                                    <ComboBoxItem Content="Date (Newest)" />
-                                    <ComboBoxItem Content="Date (Oldest)" />
+                                    <ComboBoxItem Content="Size ↓" />
+                                    <ComboBoxItem Content="Size ↑" />
+                                    <ComboBoxItem Content="Newest" />
+                                    <ComboBoxItem Content="Oldest" />
                                 </ComboBox>
                             </StackPanel>
                         </Grid>
                     </Border>
 
-                    <!-- Selection status banner -->
-                    <Border x:Name="SelectionBanner" Grid.Row="2" Background="#1D2A44"
-                            BorderBrush="#254378" BorderThickness="0,0,0,1"
-                            Padding="14,6" Visibility="Collapsed">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock x:Name="SelectionBannerText" Grid.Column="0" Text="0 selected"
-                                       FontSize="11" FontWeight="SemiBold" Foreground="#93C5FD" VerticalAlignment="Center" />
-                            <Button Grid.Column="1" Content="Clear" Style="{StaticResource SecondaryButtonStyle}"
-                                    Padding="8,2" FontSize="11" Click="ClearSelectionButton_Click" />
-                        </Grid>
-                    </Border>
-
                     <!-- Files DataGrid -->
-                    <DataGrid x:Name="FilesDataGrid" Grid.Row="3" Style="{StaticResource ModernDataGridStyle}">
+                    <DataGrid x:Name="FilesDataGrid" Grid.Row="1" Style="{StaticResource ModernDataGridStyle}">
                         <DataGrid.ContextMenu>
                             <ContextMenu Background="{StaticResource PanelDarkBrush}">
-                                <MenuItem Header="Export Selected" Click="ExportButton_Click" />
-                                <MenuItem Header="Delete Selected" Click="DeleteButton_Click" />
+                                <MenuItem Header="Export" Click="ExportButton_Click" />
+                                <MenuItem Header="Delete" Click="DeleteButton_Click" />
                                 <Separator />
                                 <MenuItem Header="Copy Name" Click="CopyFileName_Click" />
                                 <MenuItem Header="Copy Path" Click="CopyFilePath_Click" />
                             </ContextMenu>
                         </DataGrid.ContextMenu>
                         <DataGrid.Columns>
-                            <DataGridTemplateColumn Width="40">
+                            <DataGridTemplateColumn Width="36">
                                 <DataGridTemplateColumn.HeaderTemplate>
                                     <DataTemplate>
                                         <CheckBox Click="HeaderCheckBox_Click" HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -599,22 +557,21 @@
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
 
-                            <DataGridTextColumn Header="Type" Binding="{Binding IconGlyph}" Width="45" IsReadOnly="True" />
+                            <DataGridTextColumn Header="" Binding="{Binding IconGlyph}" Width="34" IsReadOnly="True" />
                             <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="4*" IsReadOnly="True" />
-                            <DataGridTextColumn Header="Category" Binding="{Binding CategoryName}" Width="100" IsReadOnly="True" />
                             <DataGridTextColumn Header="Size" Binding="{Binding FormattedSize}" Width="90" IsReadOnly="True" />
-                            <DataGridTextColumn Header="Date" Binding="{Binding FormattedDate}" Width="130" IsReadOnly="True" />
-                            <DataGridTextColumn Header="Path" Binding="{Binding DirectoryPath}" Width="4*" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Date" Binding="{Binding FormattedDate}" Width="125" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Path" Binding="{Binding DirectoryPath}" Width="3*" IsReadOnly="True" />
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>
             </Grid>
         </Grid>
 
-        <!-- BOTTOM STATUS BAR -->
+        <!-- STATUS BAR -->
         <Border Grid.Row="3" Background="{StaticResource PanelDarkBrush}"
                 BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="0,1,0,0"
-                Padding="14,0">
+                Padding="12,0">
             <Grid VerticalAlignment="Center">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -625,10 +582,10 @@
                 <TextBlock x:Name="StatusBarStatusText" Grid.Column="0" Text="Ready"
                            FontSize="11" Foreground="{StaticResource TextMutedBrush}" TextTrimming="CharacterEllipsis" />
 
-                <TextBlock x:Name="StatusBarSelectionText" Grid.Column="1" Text="0 items selected"
-                           FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="14,0" />
+                <TextBlock x:Name="StatusBarSelectionText" Grid.Column="1" Text=""
+                           FontSize="11" Foreground="#93C5FD" FontWeight="Medium" Margin="14,0" />
 
-                <TextBlock Grid.Column="2" Text="Pigsty v1.0.1"
+                <TextBlock Grid.Column="2" Text="v1.0.3"
                            FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
             </Grid>
         </Border>

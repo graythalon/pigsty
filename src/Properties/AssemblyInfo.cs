@@ -2,10 +2,10 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
 
-[assembly: AssemblyTitle("Pigsty - Android Storage Manager")]
-[assembly: AssemblyDescription("Windows freeware to manage Android device storage without Developer Options")]
+[assembly: AssemblyTitle("Pigsty")]
+[assembly: AssemblyDescription("Android MTP Storage Manager for Windows")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Pigsty Open Source")]
+[assembly: AssemblyCompany("Pigsty")]
 [assembly: AssemblyProduct("Pigsty")]
 [assembly: AssemblyCopyright("Copyright © 2026")]
 [assembly: AssemblyTrademark("")]
@@ -18,5 +18,5 @@ using System.Windows;
     ResourceDictionaryLocation.SourceAssembly
 )]
 
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyVersion("1.0.3.0")]
+[assembly: AssemblyFileVersion("1.0.3.0")]

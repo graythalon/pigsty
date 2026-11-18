@@ -73,25 +73,23 @@ Automatically indexes and groups your phone's storage into clean, dedicated cate
 
 ```
 +---------------------------------------------------------------------------------------------+
-| 🐽 Pigsty                     [Google Pixel 8 Pro v] [● Connected] [Scan]         [About]   |
+| 🐽 Pigsty                                            ● [Device v] [↻ Scan] [?]              |
 +---------------------------------------------------------------------------------------------+
-| Google Pixel 8 Pro • Internal shared storage                 84.2 GB used of 128.0 GB       |
+| Google Pixel 8 Pro  Internal shared storage                      84.2 GB / 128 GB (43.8 GB) |
 | [■ Photos 18.4GB][■ Videos 32.1GB][■ Audio 6.2GB][■ Docs 1.8GB][■ APKs 3.5GB][■ Free 43.8GB] |
 +-------------------+-------------------------------------------------------------------------+
-| CATEGORIES        | Photos • 120 items (4.2 GB)                             [Search...    ] |
-|                   +-------------------------------------------------------------------------+
-| Overview          | [Export] [Import] [Delete] | [Select All] [Clear]           [Sort: Name v] |
-| Photos            +-------------------------------------------------------------------------+
-| Videos            | [✓] | Type | Name                      | Category | Size    | Date          |
-| Audio             |-----+------+---------------------------+----------+---------+---------------|
-| Documents         | [x] | 📷   | PXL_20261024_124500.jpg   | Photos   | 4.3 MB  | 2026-10-24    |
-| APKs              | [x] | 📷   | PXL_20261024_141022.jpg   | Photos   | 5.1 MB  | 2026-10-24    |
-| Downloads         | [ ] | 📷   | Screenshot_20261025.png   | Photos   | 1.8 MB  | 2026-10-25    |
-| Archives          | [ ] | 📷   | Sunset_Coast.dng          | Photos   | 45.0 MB | 2026-10-20    |
-| Large Files       |                                                                         |
-| All Files         |                                                                         |
+| 📊 Overview       | 📸 Photos [120 • 4.2 GB]  [↓ Export][↑ Import][✕ Delete] | [🔍 Filter][Sort v] |
+| 📸 Photos     120 +-------------------------------------------------------------------------+
+| 🎬 Videos      42 | [✓] |    | Name                      | Size    | Date         | Path    |
+| 🎵 Audio       85 |-----+----+---------------------------+---------+--------------+---------|
+| 📄 Docs        19 | [x] | 📷 | PXL_20261024_124500.jpg   | 4.3 MB  | 2026-10-24   | \DCIM   |
+| 📦 APKs         6 | [x] | 📷 | PXL_20261024_141022.jpg   | 5.1 MB  | 2026-10-24   | \DCIM   |
+| 📥 Downloads   34 | [ ] | 📷 | Screenshot_20261025.png   | 1.8 MB  | 2026-10-25   | \Pict.. |
+| 🗃️ Archives     4 | [ ] | 📷 | Sunset_Coast.dng          | 45.0 MB | 2026-10-20   | \DCIM   |
+| ⚠️ Large       11 |                                                                         |
+| 📁 All        310 |                                                                         |
 +-------------------+-------------------------------------------------------------------------+
-| Ready • 120 items indexed (4.2 GB)           Selected: 2 items (9.4 MB)        Pigsty v1.0.1  |
+| 310 items • 58.2 GB                                      2 selected (9.4 MB)         v1.0.3 |
 +---------------------------------------------------------------------------------------------+
 ```
 

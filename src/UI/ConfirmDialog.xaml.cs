@@ -1,5 +1,5 @@
-using System;
 using System.Windows;
+using System.Windows.Input;
 
 namespace Pigsty.UI
 {
@@ -16,7 +16,15 @@ namespace Pigsty.UI
             if (!isDanger)
             {
                 ConfirmButton.Style = (Style)FindResource("PrimaryButtonStyle");
-                IconBlock.Text = "ℹ️";
+                IconBlock.Text = "↓";
+            }
+        }
+
+        private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ButtonState == MouseButtonState.Pressed)
+            {
+                DragMove();
             }
         }
 

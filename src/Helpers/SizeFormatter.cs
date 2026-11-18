@@ -1,4 +1,6 @@
 using System;
+using System.Globalization;
+using System.Text;
 
 namespace Pigsty.Helpers
 {
@@ -8,8 +10,7 @@ namespace Pigsty.Helpers
 
         public static string FormatBytes(long bytes)
         {
-            if (bytes < 0) return "0 B";
-            if (bytes == 0) return "0 B";
+            if (bytes <= 0) return "0 B";
 
             double size = bytes;
             int unitIndex = 0;
@@ -22,53 +23,80 @@ namespace Pigsty.Helpers
 
             if (unitIndex == 0)
             {
-                return string.Format("{0} B", (long)size);
+                return string.Format(CultureInfo.InvariantCulture, "{0} B", (long)size);
             }
             if (size >= 100)
             {
-                return string.Format("{0:0} {1}", size, Units[unitIndex]);
+                return string.Format(CultureInfo.InvariantCulture, "{0:0} {1}", size, Units[unitIndex]);
             }
             if (size >= 10)
             {
-                return string.Format("{0:0.#} {1}", size, Units[unitIndex]);
+                return string.Format(CultureInfo.InvariantCulture, "{0:0.#} {1}", size, Units[unitIndex]);
             }
-            return string.Format("{0:0.##} {1}", size, Units[unitIndex]);
+            return string.Format(CultureInfo.InvariantCulture, "{0:0.##} {1}", size, Units[unitIndex]);
         }
 
         public static long ParseSizeString(string sizeStr)
         {
             if (string.IsNullOrWhiteSpace(sizeStr)) return 0;
-            sizeStr = sizeStr.Trim().ToUpperInvariant();
+
+            // Strip invisible Unicode bidi marks (\u200E, \u200F, etc.) often injected by Windows Shell GetDetailsOf
+            var sb = new StringBuilder(sizeStr.Length);
+            foreach (char c in sizeStr)
+            {
+                if (c >= 32 && c <= 126)
+                {
+                    sb.Append(char.ToUpperInvariant(c));
+                }
+            }
+
+            string clean = sb.ToString().Trim();
+            if (string.IsNullOrEmpty(clean)) return 0;
 
             long multiplier = 1;
-            if (sizeStr.EndsWith("TB"))
+            if (clean.EndsWith("TB", StringComparison.Ordinal))
             {
                 multiplier = 1024L * 1024L * 1024L * 1024L;
-                sizeStr = sizeStr.Substring(0, sizeStr.Length - 2).Trim();
+                clean = clean.Substring(0, clean.Length - 2).Trim();
             }
-            else if (sizeStr.EndsWith("GB"))
+            else if (clean.EndsWith("GB", StringComparison.Ordinal))
             {
                 multiplier = 1024L * 1024L * 1024L;
-                sizeStr = sizeStr.Substring(0, sizeStr.Length - 2).Trim();
+                clean = clean.Substring(0, clean.Length - 2).Trim();
             }
-            else if (sizeStr.EndsWith("MB"))
+            else if (clean.EndsWith("MB", StringComparison.Ordinal))
             {
                 multiplier = 1024L * 1024L;
-                sizeStr = sizeStr.Substring(0, sizeStr.Length - 2).Trim();
+                clean = clean.Substring(0, clean.Length - 2).Trim();
             }
-            else if (sizeStr.EndsWith("KB"))
+            else if (clean.EndsWith("KB", StringComparison.Ordinal))
             {
                 multiplier = 1024L;
-                sizeStr = sizeStr.Substring(0, sizeStr.Length - 2).Trim();
+                clean = clean.Substring(0, clean.Length - 2).Trim();
             }
-            else if (sizeStr.EndsWith("B"))
+            else if (clean.EndsWith("BYTES", StringComparison.Ordinal))
             {
                 multiplier = 1;
-                sizeStr = sizeStr.Substring(0, sizeStr.Length - 1).Trim();
+                clean = clean.Substring(0, clean.Length - 5).Trim();
+            }
+            else if (clean.EndsWith("B", StringComparison.Ordinal))
+            {
+                multiplier = 1;
+                clean = clean.Substring(0, clean.Length - 1).Trim();
+            }
+
+            // Normalize number separators
+            if (clean.Contains(",") && clean.Contains("."))
+            {
+                clean = clean.Replace(",", "");
+            }
+            else if (clean.Contains(","))
+            {
+                clean = clean.Replace(",", ".");
             }
 
             double val;
-            if (double.TryParse(sizeStr, out val))
+            if (double.TryParse(clean, NumberStyles.Float, CultureInfo.InvariantCulture, out val) && val >= 0)
             {
                 return (long)(val * multiplier);
             }
